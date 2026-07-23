@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Box,
   Check,
@@ -227,6 +227,7 @@ export default function ProductCreateModal({
   });
   const [slugEdited, setSlugEdited] = useState(false);
   const [images, setImages] = useState<ImageDraft[]>([]);
+  const previewUrls = useRef(new Set<string>());
   const [primaryImageId, setPrimaryImageId] = useState("");
   const [options, setOptions] = useState<OptionDraft[]>([]);
   const [variants, setVariants] = useState<VariantDraft[]>([
@@ -244,6 +245,8 @@ export default function ProductCreateModal({
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = previous;
+      previewUrls.current.forEach((url) => URL.revokeObjectURL(url));
+      previewUrls.current.clear();
     };
   }, []);
 
@@ -284,11 +287,11 @@ export default function ProductCreateModal({
       return;
     }
     const remaining = Math.max(0, 12 - images.length);
-    const next = accepted.slice(0, remaining).map((file) => ({
-      id: newId(),
-      file,
-      preview: URL.createObjectURL(file),
-    }));
+    const next = accepted.slice(0, remaining).map((file) => {
+      const preview = URL.createObjectURL(file);
+      previewUrls.current.add(preview);
+      return { id: newId(), file, preview };
+    });
     setImages((current) => [...current, ...next]);
     if (!primaryImageId && next[0]) setPrimaryImageId(next[0].id);
     if (accepted.length > remaining)
@@ -298,7 +301,10 @@ export default function ProductCreateModal({
   const removeImage = (id: string) => {
     setImages((current) => {
       const target = current.find((image) => image.id === id);
-      if (target) URL.revokeObjectURL(target.preview);
+      if (target) {
+        URL.revokeObjectURL(target.preview);
+        previewUrls.current.delete(target.preview);
+      }
       const next = current.filter((image) => image.id !== id);
       if (primaryImageId === id) setPrimaryImageId(next[0]?.id ?? "");
       return next;
