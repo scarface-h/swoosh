@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { formatCurrency } from "@swoosh/utilities";
 import { apiFetch, apiFetchPage, ApiError } from "@/lib/api";
@@ -8,6 +8,7 @@ import {
   type PublicCollection,
   productImage,
 } from "@/lib/catalog";
+import { CollectionPageSkeleton } from "@/components/catalog/CatalogSkeletons";
 
 export default function CollectionPage() {
   const { slug = "" } = useParams<{ slug: string }>();
@@ -46,11 +47,7 @@ export default function CollectionPage() {
   }, [slug]);
 
   if (loading) {
-    return (
-      <div className="grid min-h-[60vh] place-items-center pt-24">
-        <Loader2 className="h-7 w-7 animate-spin text-muted" />
-      </div>
-    );
+    return <CollectionPageSkeleton />;
   }
 
   if (error || !collection) {

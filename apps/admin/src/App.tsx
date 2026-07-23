@@ -5,6 +5,7 @@ import ProductsPage from "./pages/ProductsPage";
 import OrdersPage from "./pages/OrdersPage";
 import CustomersPage from "./pages/CustomersPage";
 import SettingsPage from "./pages/SettingsPage";
+import CatalogPage from "./pages/CatalogPage";
 import LoginPage from "./pages/LoginPage";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
@@ -16,6 +17,7 @@ export default function App() {
         <Route element={<AdminLayout />}>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/products" element={<ProductsPage />} />
+          <Route path="/catalog" element={<CatalogPage />} />
           <Route path="/orders" element={<OrdersPage />} />
           <Route path="/customers" element={<CustomersPage />} />
           <Route path="/settings" element={<SettingsPage />} />

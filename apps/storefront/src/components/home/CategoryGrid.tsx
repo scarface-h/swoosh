@@ -11,11 +11,41 @@ interface CategoryCard {
 
 export default function CategoryGrid({
   categories,
+  loading = false,
 }: {
   categories: CategoryCard[];
+  loading?: boolean;
 }) {
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: "-100px" });
+
+  if (loading) {
+    return (
+      <section
+        className="grid grid-cols-1 gap-1.5 p-1.5 sm:h-[88svh] sm:grid-cols-2 sm:grid-rows-[1.35fr_0.8fr] md:h-screen md:grid-rows-2 md:gap-2 md:p-2"
+        aria-label="Loading featured categories"
+        aria-busy="true"
+      >
+        {[0, 1, 2].map((index) => (
+          <div
+            key={index}
+            className={`animate-pulse bg-line/70 ${
+              index === 0
+                ? "min-h-[62svh] sm:col-span-2 sm:min-h-0 md:col-span-1 md:row-span-2"
+                : "min-h-[52svh] sm:col-span-1 sm:min-h-0"
+            }`}
+          >
+            <div className="flex h-full items-end p-6">
+              <div className="w-40 space-y-3">
+                <div className="h-7 rounded bg-surface/60" />
+                <div className="h-4 w-24 rounded bg-surface/60" />
+              </div>
+            </div>
+          </div>
+        ))}
+      </section>
+    );
+  }
 
   if (!categories.length) return null;
 

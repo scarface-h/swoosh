@@ -15,6 +15,7 @@
     "db:deploy": "prisma migrate deploy",
     "db:validate": "prisma validate",
     "db:seed": "tsx prisma/seed/index.ts",
+    "db:seed:catalog": "tsx prisma/seed/catalog-only.ts",
     "db:studio": "prisma studio",
     "lint": "eslint src prisma --max-warnings=0",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.seed.json"

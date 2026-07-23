@@ -21,15 +21,52 @@ export const publicRouter = Router();
 publicRouter.get(
   "/categories",
   asyncHandler(async (_req, res) => {
-    const items = await prisma.category.findMany({
-      where: { isActive: true, archivedAt: null },
-      orderBy: { sortOrder: "asc" },
-      include: {
-        _count: { select: { products: true } },
-        children: { where: { isActive: true }, orderBy: { sortOrder: "asc" } },
-      },
+    const [categories, productCounts] = await Promise.all([
+      prisma.category.findMany({
+        where: { isActive: true, archivedAt: null },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      }),
+      prisma.product.groupBy({
+        by: ["categoryId"],
+        where: { status: "ACTIVE", archivedAt: null },
+        _count: { _all: true },
+      }),
+    ]);
+    const directCounts = new Map(
+      productCounts.map((row) => [row.categoryId, row._count._all]),
+    );
+    type CategoryNode = (typeof categories)[number] & {
+      children: CategoryNode[];
+      _count: { products: number };
+    };
+    const nodes = new Map<string, CategoryNode>(
+      categories.map((category) => [
+        category.id,
+        {
+          ...category,
+          children: [],
+          _count: { products: directCounts.get(category.id) ?? 0 },
+        },
+      ]),
+    );
+    const roots: CategoryNode[] = [];
+    nodes.forEach((node) => {
+      const parent = node.parentId ? nodes.get(node.parentId) : undefined;
+      if (parent) parent.children.push(node);
+      else roots.push(node);
     });
-    sendSuccess(res, items);
+    const addDescendantCounts = (node: CategoryNode): number => {
+      const total =
+        node._count.products +
+        node.children.reduce(
+          (sum, child) => sum + addDescendantCounts(child),
+          0,
+        );
+      node._count.products = total;
+      return total;
+    };
+    roots.forEach(addDescendantCounts);
+    sendSuccess(res, roots);
   }),
 );
 publicRouter.get(

@@ -1,5 +1,6 @@
 import argon2 from 'argon2';
 import { PrismaClient } from '@prisma/client';
+import { seedCatalog } from './catalog.js';
 
 const prisma = new PrismaClient();
 const permissions = [
@@ -17,6 +18,7 @@ const rolePermissions: Record<string, string[]> = {
 };
 
 async function main() {
+  await seedCatalog(prisma);
   const permissionRows = new Map<string, string>();
   for (const code of permissions) {
     const row = await prisma.permission.upsert({ where: { code }, update: {}, create: { code } });
@@ -49,8 +51,8 @@ async function main() {
     update: {}, create: { adminId: admin.id, roleId: roles.get('SUPER_ADMIN')! },
   });
 
-  const category = await prisma.category.upsert({
-    where: { slug: 't-shirts' }, update: {}, create: { name: 'T-Shirts', slug: 't-shirts', description: 'Everyday premium cotton t-shirts' },
+  const category = await prisma.category.findUniqueOrThrow({
+    where: { slug: 't-shirts' },
   });
   const collection = await prisma.collection.upsert({
     where: { slug: 'new-arrivals' }, update: {}, create: { name: 'New Arrivals', slug: 'new-arrivals', isFeatured: true },

@@ -3,6 +3,7 @@ import { Outlet } from "react-router-dom";
 import Header from "./Header";
 import Footer from "./Footer";
 import { apiFetch } from "@/lib/api";
+import CartDrawer from "@/components/cart/CartDrawer";
 
 export default function Layout() {
   const [maintenance, setMaintenance] = useState<{
@@ -24,6 +25,7 @@ export default function Layout() {
   return (
     <>
       <Header />
+      <CartDrawer />
       {maintenance?.active ? (
         <main className="grid min-h-[100svh] place-items-center bg-background px-5 pt-20 text-center">
           <div className="max-w-lg">

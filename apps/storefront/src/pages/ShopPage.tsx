@@ -20,6 +20,7 @@ import {
 } from "@/lib/catalog";
 import { cn } from "@/lib/utils";
 import { useWishlistStore } from "@/stores/wishlistStore";
+import { ProductGridSkeleton } from "@/components/catalog/CatalogSkeletons";
 
 const SORT_OPTIONS = [
   { value: "newest", label: "Newest" },
@@ -27,6 +28,16 @@ const SORT_OPTIONS = [
   { value: "price_asc", label: "Price: Low to High" },
   { value: "price_desc", label: "Price: High to Low" },
 ] as const;
+
+function flattenCategories(
+  categories: PublicCategory[],
+  depth = 0,
+): Array<PublicCategory & { depth: number }> {
+  return categories.flatMap((category) => [
+    { ...category, depth },
+    ...flattenCategories(category.children ?? [], depth + 1),
+  ]);
+}
 
 function ProductCard({ product }: { product: CatalogProduct }) {
   const { items, toggleItem } = useWishlistStore();
@@ -248,7 +259,7 @@ export default function ShopPage() {
           >
             All products
           </button>
-          {categories.map((item) => (
+          {flattenCategories(categories).map((item) => (
             <button
               type="button"
               key={item.id}
@@ -258,7 +269,10 @@ export default function ShopPage() {
                 category === item.slug ? "font-medium text-ink" : "text-muted",
               )}
             >
-              {item.name}
+              <span style={{ paddingLeft: `${item.depth * 0.75}rem` }}>
+                {item.depth > 0 ? "— " : ""}
+                {item.name}
+              </span>
               {item._count && (
                 <span className="text-xs">{item._count.products}</span>
               )}
@@ -386,9 +400,7 @@ export default function ShopPage() {
               </div>
             </div>
           ) : loading ? (
-            <div className="grid min-h-72 place-items-center">
-              <Loader2 className="animate-spin text-accent" />
-            </div>
+            <ProductGridSkeleton count={9} />
           ) : products.length === 0 ? (
             <div className="grid min-h-72 place-items-center text-center">
               <div>

@@ -6,9 +6,10 @@ import CampaignBanner from "@/components/home/CampaignBanner";
 import BestsellerGrid from "@/components/home/BestsellerGrid";
 import BrandValues from "@/components/home/BrandValues";
 import NewsletterBanner from "@/components/home/NewsletterBanner";
-import { apiFetchPage } from "@/lib/api";
+import { apiFetch, apiFetchPage } from "@/lib/api";
 import {
   type CatalogProduct,
+  type PublicCategory,
   optionValues,
   productImage,
 } from "@/lib/catalog";
@@ -55,6 +56,8 @@ export default function HomePage() {
   const [newArrivals, setNewArrivals] = useState<HomeCard[]>([]);
   const [featured, setFeatured] = useState<HomeCard[]>([]);
   const [catalog, setCatalog] = useState<CatalogProduct[]>([]);
+  const [categories, setCategories] = useState<PublicCategory[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
@@ -65,34 +68,31 @@ export default function HomePage() {
         "/products?page=1&pageSize=8&featured=true&sort=popular",
       ),
       apiFetchPage<CatalogProduct>("/products?page=1&pageSize=24&sort=newest"),
+      apiFetch<PublicCategory[]>("/categories"),
     ])
-      .then(([newResult, featuredResult, catalogResult]) => {
+      .then(([newResult, featuredResult, catalogResult, categoryResult]) => {
         setNewArrivals(newResult.items.map(toCard));
         setFeatured(featuredResult.items.map(toCard));
         setCatalog(catalogResult.items);
+        setCategories(categoryResult);
       })
       .catch(() => {
         setNewArrivals([]);
         setFeatured([]);
         setCatalog([]);
-      });
+        setCategories([]);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
-  const categoryCards = Array.from(
-    new Map(
-      catalog
-        .filter((product) => product.category)
-        .map((product) => [
-          product.category!.slug,
-          {
-            id: product.category!.slug,
-            name: product.category!.name,
-            slug: product.category!.slug,
-            image: productImage(product),
-          },
-        ]),
-    ).values(),
-  );
+  const categoryCards = categories.map((category, index) => ({
+    id: category.id,
+    name: category.name,
+    slug: category.slug,
+    image:
+      category.imageUrl ??
+      (catalog[index] ? productImage(catalog[index]) : ""),
+  }));
   const heroImage =
     featured[0]?.image ??
     newArrivals[0]?.image ??
@@ -105,7 +105,7 @@ export default function HomePage() {
   return (
     <main>
       <HeroSection image={heroImage} />
-      <CategoryGrid categories={categoryCards} />
+      <CategoryGrid categories={categoryCards} loading={loading} />
       <NewArrivalsRail products={newArrivals} />
       <CampaignBanner image={campaignImage} />
       <BestsellerGrid products={featured} />

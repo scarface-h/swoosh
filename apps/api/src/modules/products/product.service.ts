@@ -92,7 +92,33 @@ const variantInclude = {
 export async function listProducts(q: ProductListQuery) {
   const where: any = { status: 'ACTIVE', archivedAt: null };
   if (q.ids?.length) where.id = { in: q.ids };
-  if (q.category) where.category = { slug: q.category };
+  if (q.category) {
+    const categories = await prisma.category.findMany({
+      where: { archivedAt: null },
+      select: { id: true, slug: true, parentId: true },
+    });
+    const selected = categories.find((category) => category.slug === q.category);
+    if (selected) {
+      const categoryIds = new Set([selected.id]);
+      let foundDescendant = true;
+      while (foundDescendant) {
+        foundDescendant = false;
+        for (const category of categories) {
+          if (
+            category.parentId &&
+            categoryIds.has(category.parentId) &&
+            !categoryIds.has(category.id)
+          ) {
+            categoryIds.add(category.id);
+            foundDescendant = true;
+          }
+        }
+      }
+      where.categoryId = { in: [...categoryIds] };
+    } else {
+      where.categoryId = "__missing_category__";
+    }
+  }
   if (q.collection) where.collections = { some: { collection: { slug: q.collection } } };
   if (q.featured) where.isFeatured = true;
   if (q.newArrival) where.isNewArrival = true;

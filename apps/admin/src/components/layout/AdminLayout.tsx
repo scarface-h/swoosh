@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Package, ShoppingCart, Users, Settings, LogOut, Menu, X } from "lucide-react";
+import { FolderTree, LayoutDashboard, Package, ShoppingCart, Users, Settings, LogOut, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
 
 const navItems = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
   { label: "Products", href: "/products", icon: Package },
+  { label: "Catalog", href: "/catalog", icon: FolderTree },
   { label: "Orders", href: "/orders", icon: ShoppingCart },
   { label: "Customers", href: "/customers", icon: Users },
   { label: "Settings", href: "/settings", icon: Settings },
