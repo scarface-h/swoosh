@@ -23,6 +23,12 @@ export interface CatalogProduct {
   slug: string;
   shortDescription: string | null;
   description: string;
+  brand: string | null;
+  productType: string | null;
+  vendor: string | null;
+  countryOfOrigin: string | null;
+  hsCode: string | null;
+  attributes: Record<string, string>;
   category: { name: string; slug: string } | null;
   collections: Array<{ name: string; slug: string }>;
   images: Array<{ url: string; alt: string | null }>;

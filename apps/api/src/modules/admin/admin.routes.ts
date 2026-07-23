@@ -16,7 +16,7 @@ import { AppError } from '../../common/errors/AppError.js';
 import { hashPassword } from '../../common/security/crypto.js';
 import { env } from '../../config/env.js';
 import { cloudinary, isCloudinaryConfigured } from '../../config/cloudinary.js';
-import { sanitizeContentObject } from '../../common/security/sanitize.js';
+import { sanitizeContentObject, sanitizePlainText } from '../../common/security/sanitize.js';
 
 const router = Router();
 router.use(requireAuth('admin'));
@@ -59,6 +59,25 @@ const productBody = z.object({
   slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(191),
   categoryId: z.string().min(1),
   skuPrefix: z.string().max(60).optional().nullable(),
+  brand: z.string().max(160).optional().nullable(),
+  productType: z.string().max(160).optional().nullable(),
+  vendor: z.string().max(160).optional().nullable(),
+  countryOfOrigin: z.string().max(120).optional().nullable(),
+  hsCode: z.string().max(32).optional().nullable(),
+  attributes: z
+    .record(z.string().max(500))
+    .refine(
+      (value) =>
+        Object.keys(value).length <= 100 &&
+        Object.keys(value).every(
+          (key) => key.trim().length > 0 && key.length <= 80,
+        ),
+      {
+        message:
+          'Use no more than 100 specifications with names up to 80 characters',
+      },
+    )
+    .default({}),
   shortDescription: z.string().max(500).optional().nullable(),
   description: z.string().min(1).max(100_000),
   regularPrice: z.coerce.number().positive(),
@@ -73,6 +92,182 @@ const productBody = z.object({
   seoDescription: z.string().max(320).optional().nullable(),
   collectionIds: z.array(z.string()).default([]),
 }).strict();
+
+export const fullProductBody = z
+  .object({
+    product: productBody,
+    options: z
+      .array(
+        z
+          .object({
+            name: z.string().trim().min(1).max(80),
+            values: z
+              .array(
+                z
+                  .object({
+                    value: z.string().trim().min(1).max(120),
+                    metadata: z.record(z.unknown()).optional(),
+                  })
+                  .strict(),
+              )
+              .min(1)
+              .max(100),
+          })
+          .strict(),
+      )
+      .max(8),
+    variants: z
+      .array(
+        z
+          .object({
+            sku: z.string().trim().min(1).max(100),
+            barcode: z.string().trim().max(100).optional().nullable(),
+            priceOverride: z.coerce.number().positive().optional().nullable(),
+            salePriceOverride: z.coerce
+              .number()
+              .positive()
+              .optional()
+              .nullable(),
+            saleStartsAt: z.coerce.date().optional().nullable(),
+            saleEndsAt: z.coerce.date().optional().nullable(),
+            initialStock: z.coerce.number().int().min(0).max(10_000_000),
+            lowStockThreshold: z.coerce.number().int().min(0).max(1_000_000),
+            weightGrams: z.coerce
+              .number()
+              .int()
+              .positive()
+              .optional()
+              .nullable(),
+            isActive: z.boolean().default(true),
+            optionValues: z.record(z.string().trim().min(1).max(120)),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(500),
+  })
+  .strict()
+  .superRefine((input, context) => {
+    if (
+      input.product.salePrice != null &&
+      input.product.salePrice >= input.product.regularPrice
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["product", "salePrice"],
+        message: "Sale price must be lower than the regular price",
+      });
+    }
+    if (
+      input.product.saleStartsAt &&
+      input.product.saleEndsAt &&
+      input.product.saleStartsAt >= input.product.saleEndsAt
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["product", "saleEndsAt"],
+        message: "Sale end must be later than sale start",
+      });
+    }
+    const optionNames = new Set<string>();
+    const optionValues = new Map<string, Set<string>>();
+    input.options.forEach((option, optionIndex) => {
+      const normalizedName = option.name.toLowerCase();
+      if (optionNames.has(normalizedName)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["options", optionIndex, "name"],
+          message: "Option names must be unique",
+        });
+      }
+      optionNames.add(normalizedName);
+      const values = new Set<string>();
+      option.values.forEach((item, valueIndex) => {
+        const normalizedValue = item.value.toLowerCase();
+        if (values.has(normalizedValue)) {
+          context.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["options", optionIndex, "values", valueIndex, "value"],
+            message: "Option values must be unique",
+          });
+        }
+        values.add(normalizedValue);
+      });
+      optionValues.set(normalizedName, values);
+    });
+
+    const skus = new Set<string>();
+    const combinations = new Set<string>();
+    input.variants.forEach((variant, variantIndex) => {
+      const normalizedSku = variant.sku.toLowerCase();
+      if (skus.has(normalizedSku)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["variants", variantIndex, "sku"],
+          message: "Variant SKUs must be unique",
+        });
+      }
+      skus.add(normalizedSku);
+      const combination = input.options
+        .map(
+          (option) =>
+            `${option.name.toLowerCase()}=${Object.entries(
+              variant.optionValues,
+            )
+              .find(
+                ([name]) =>
+                  name.toLowerCase() === option.name.toLowerCase(),
+              )?.[1]
+              ?.toLowerCase() ?? ""}`,
+        )
+        .join("|");
+      if (combinations.has(combination)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["variants", variantIndex, "optionValues"],
+          message: "Variant option combinations must be unique",
+        });
+      }
+      combinations.add(combination);
+      if (
+        variant.salePriceOverride != null &&
+        variant.salePriceOverride >=
+          (variant.priceOverride ?? input.product.regularPrice)
+      ) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["variants", variantIndex, "salePriceOverride"],
+          message: "Sale price must be lower than the variant price",
+        });
+      }
+      for (const option of input.options) {
+        const selected = Object.entries(variant.optionValues).find(
+          ([name]) => name.toLowerCase() === option.name.toLowerCase(),
+        )?.[1];
+        if (
+          !selected ||
+          !optionValues
+            .get(option.name.toLowerCase())
+            ?.has(selected.toLowerCase())
+        ) {
+          context.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["variants", variantIndex, "optionValues", option.name],
+            message: `Select a valid ${option.name} value`,
+          });
+        }
+      }
+      if (
+        Object.keys(variant.optionValues).length !== input.options.length
+      ) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["variants", variantIndex, "optionValues"],
+          message: "Variant selections must match the product options",
+        });
+      }
+    });
+  });
 
 router.get('/products', requirePermission(PERMISSIONS.PRODUCTS_READ), validate({ query: pagination }), asyncHandler(async (req, res) => {
   const q = pagination.parse(req.query);
@@ -100,6 +295,129 @@ router.post('/products', requirePermission(PERMISSIONS.PRODUCTS_CREATE), validat
   await audit(req, res, 'product.create', 'Product', product.id, undefined, product);
   sendSuccess(res, product, 201);
 }));
+
+router.post(
+  '/products/full',
+  requirePermission(PERMISSIONS.PRODUCTS_CREATE),
+  validate({ body: fullProductBody }),
+  asyncHandler(async (req, res) => {
+    const { product: productInput, options, variants } = req.body;
+    const { collectionIds, ...rawProduct } = productInput;
+    const safeProduct = sanitizeContentObject(rawProduct);
+    safeProduct.attributes = Object.fromEntries(
+      Object.entries(productInput.attributes).map(([key, value]) => [
+        sanitizePlainText(key).slice(0, 80),
+        sanitizePlainText(String(value)),
+      ]),
+    );
+    const product = await prisma.$transaction(async (tx) => {
+      const createdProduct = await tx.product.create({
+        data: {
+          ...safeProduct,
+          regularPrice: productInput.regularPrice.toString(),
+          salePrice: productInput.salePrice?.toString() ?? null,
+          createdByAdminId: req.auth!.sub,
+          collections: {
+            create: collectionIds.map((collectionId: string) => ({
+              collectionId,
+            })),
+          },
+        },
+      });
+
+      const valueIds = new Map<string, string>();
+      for (const [optionIndex, option] of options.entries()) {
+        const createdOption = await tx.productOption.create({
+          data: {
+            productId: createdProduct.id,
+            name: option.name,
+            sortOrder: optionIndex,
+            values: {
+              create: option.values.map(
+                (
+                  item: { value: string; metadata?: Record<string, unknown> },
+                  valueIndex: number,
+                ) => ({
+                  value: item.value,
+                  metadata: item.metadata,
+                  sortOrder: valueIndex,
+                }),
+              ),
+            },
+          },
+          include: { values: true },
+        });
+        for (const value of createdOption.values) {
+          valueIds.set(
+            `${createdOption.name.toLowerCase()}\u0000${value.value.toLowerCase()}`,
+            value.id,
+          );
+        }
+      }
+
+      for (const variant of variants) {
+        const createdVariant = await tx.productVariant.create({
+          data: {
+            productId: createdProduct.id,
+            sku: variant.sku,
+            barcode: variant.barcode || null,
+            priceOverride: variant.priceOverride?.toString() ?? null,
+            salePriceOverride:
+              variant.salePriceOverride?.toString() ?? null,
+            saleStartsAt: variant.saleStartsAt ?? null,
+            saleEndsAt: variant.saleEndsAt ?? null,
+            stock: variant.initialStock,
+            lowStockThreshold: variant.lowStockThreshold,
+            weightGrams: variant.weightGrams ?? null,
+            isActive: variant.isActive,
+            optionValues: {
+              create: Object.entries(
+                variant.optionValues as Record<string, string>,
+              ).map(([name, value]) => ({
+                valueId: valueIds.get(
+                  `${name.toLowerCase()}\u0000${value.toLowerCase()}`,
+                )!,
+              })),
+            },
+          },
+        });
+        if (variant.initialStock > 0) {
+          await tx.inventoryMovement.create({
+            data: {
+              variantId: createdVariant.id,
+              type: 'RESTOCK',
+              quantity: variant.initialStock,
+              previousStock: 0,
+              newStock: variant.initialStock,
+              reason: 'Initial stock entered during product creation',
+              adminId: req.auth!.sub,
+            },
+          });
+        }
+      }
+      return createdProduct;
+    });
+    await audit(
+      req,
+      res,
+      'product.full_create',
+      'Product',
+      product.id,
+      undefined,
+      { optionCount: options.length, variantCount: variants.length },
+    );
+    sendSuccess(
+      res,
+      {
+        id: product.id,
+        slug: product.slug,
+        optionCount: options.length,
+        variantCount: variants.length,
+      },
+      201,
+    );
+  }),
+);
 
 router.get('/products/:id', requirePermission(PERMISSIONS.PRODUCTS_READ), asyncHandler(async (req, res) => {
   const product = await prisma.product.findUnique({

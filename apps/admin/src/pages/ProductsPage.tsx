@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Loader2, PackagePlus, Plus, RefreshCw } from "lucide-react";
 import ProductCreateModal, {
   type Category,
+  type Collection,
 } from "@/components/products/ProductCreateModal";
 import { adminApiFetch, ApiError } from "@/lib/api";
 
@@ -26,6 +27,7 @@ const money = new Intl.NumberFormat("en-BD", {
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [collections, setCollections] = useState<Collection[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -36,12 +38,14 @@ export default function ProductsPage() {
     setLoading(true);
     setError("");
     try {
-      const [productItems, categoryItems] = await Promise.all([
+      const [productItems, categoryItems, collectionItems] = await Promise.all([
         adminApiFetch<Product[]>("/admin/products?page=1&pageSize=100"),
         adminApiFetch<Category[]>("/admin/categories"),
+        adminApiFetch<Collection[]>("/admin/collections"),
       ]);
       setProducts(productItems);
       setCategories(categoryItems);
+      setCollections(collectionItems);
     } catch (caught) {
       setError(
         caught instanceof ApiError
@@ -204,6 +208,7 @@ export default function ProductsPage() {
       {createOpen && (
         <ProductCreateModal
           categories={categories}
+          collections={collections}
           onClose={() => setCreateOpen(false)}
           onCreated={(message) => {
             setCreateOpen(false);

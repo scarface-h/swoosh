@@ -58,6 +58,13 @@ function serializeProduct(p: any) {
     slug: p.slug,
     shortDescription: p.shortDescription,
     description: p.description,
+    brand: p.brand,
+    productType: p.productType,
+    vendor: p.vendor,
+    countryOfOrigin: p.countryOfOrigin,
+    hsCode: p.hsCode,
+    attributes:
+      p.attributes && typeof p.attributes === 'object' ? p.attributes : {},
     category: p.category ? { name: p.category.name, slug: p.category.slug } : null,
     collections: p.collections?.map((pc: any) => ({ name: pc.collection.name, slug: pc.collection.slug })) ?? [],
     images: p.images?.map((i: any) => ({ url: i.url, alt: i.altText })) ?? [],

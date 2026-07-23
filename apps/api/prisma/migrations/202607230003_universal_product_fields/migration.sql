@@ -1,0 +1,7 @@
+ALTER TABLE `products`
+  ADD COLUMN `brand` VARCHAR(160) NULL,
+  ADD COLUMN `productType` VARCHAR(160) NULL,
+  ADD COLUMN `vendor` VARCHAR(160) NULL,
+  ADD COLUMN `countryOfOrigin` VARCHAR(120) NULL,
+  ADD COLUMN `hsCode` VARCHAR(32) NULL,
+  ADD COLUMN `attributes` JSON NULL;

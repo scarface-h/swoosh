@@ -285,6 +285,12 @@ model Product {
   name             String              @db.VarChar(200)
   slug             String              @unique @db.VarChar(191)
   skuPrefix        String?             @db.VarChar(60)
+  brand            String?             @db.VarChar(160)
+  productType      String?             @db.VarChar(160)
+  vendor           String?             @db.VarChar(160)
+  countryOfOrigin  String?             @db.VarChar(120)
+  hsCode           String?             @db.VarChar(32)
+  attributes       Json?
   shortDescription String?             @db.VarChar(500)
   description      String              @db.LongText
   regularPrice     Decimal             @db.Decimal(12, 2)

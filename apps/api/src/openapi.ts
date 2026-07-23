@@ -149,6 +149,13 @@ export const openapiDocument = {
         responses: { "201": { description: "Product created" } },
       },
     },
+    "/admin/products/full": {
+      post: {
+        summary:
+          "Atomically create a product with arbitrary options, variants and initial inventory",
+        responses: { "201": { description: "Complete product created" } },
+      },
+    },
     "/admin/inventory/adjust": {
       post: {
         summary: "Atomically adjust inventory and record movement",

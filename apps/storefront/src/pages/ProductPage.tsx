@@ -408,7 +408,35 @@ export default function ProductPage() {
             </button>
             {accordion === "details" && (
               <div className="border-b border-line py-4 text-sm leading-relaxed text-muted">
-                <p>{product.description}</p>
+                <div
+                  className="space-y-3 [&_a]:underline [&_h2]:font-serif [&_h2]:text-xl [&_h2]:text-ink [&_h3]:font-semibold [&_li]:ml-5 [&_ol]:list-decimal [&_p]:leading-relaxed [&_ul]:list-disc"
+                  dangerouslySetInnerHTML={{ __html: product.description }}
+                />
+                {(product.brand ||
+                  product.productType ||
+                  product.countryOfOrigin ||
+                  Object.keys(product.attributes ?? {}).length > 0) && (
+                  <dl className="mt-5 divide-y divide-line border-y border-line">
+                    {[
+                      ["Brand", product.brand],
+                      ["Product type", product.productType],
+                      ["Country of origin", product.countryOfOrigin],
+                      ...Object.entries(product.attributes ?? {}),
+                    ]
+                      .filter((entry): entry is [string, string] =>
+                        Boolean(entry[1]),
+                      )
+                      .map(([label, value]) => (
+                        <div
+                          key={label}
+                          className="grid grid-cols-[minmax(7rem,0.4fr)_1fr] gap-3 py-2.5"
+                        >
+                          <dt className="font-medium text-ink">{label}</dt>
+                          <dd>{value}</dd>
+                        </div>
+                      ))}
+                  </dl>
+                )}
                 {product.tags.length > 0 && (
                   <p className="mt-3 text-xs uppercase tracking-wider">
                     {product.tags.join(" · ")}
