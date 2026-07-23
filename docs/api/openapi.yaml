@@ -1,0 +1,130 @@
+openapi: 3.1.0
+info:
+  title: Swoosh Commerce API
+  version: 1.0.0
+  description: Production REST contract. Runtime Swagger UI is available at /api-docs.
+servers:
+  - url: /api/v1
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+    refreshCookie: { type: apiKey, in: cookie, name: refresh_token }
+  schemas:
+    Error:
+      type: object
+      required: [success, error, requestId]
+      properties:
+        success: { const: false }
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string }
+            message: { type: string }
+            fields: { type: object, additionalProperties: { type: array, items: { type: string } } }
+        requestId: { type: string }
+    CheckoutLine:
+      type: object
+      required: [variantId, quantity]
+      properties:
+        variantId: { type: string }
+        quantity: { type: integer, minimum: 1, maximum: 50 }
+        expectedUnitPrice: { type: string, pattern: '^\d{1,10}\.\d{2}$', description: Optional comparison value; never authoritative }
+    Delivery:
+      type: object
+      required: [division, district, area, addressLine, deliveryZone]
+      properties:
+        division: { type: string }
+        district: { type: string }
+        area: { type: string }
+        addressLine: { type: string }
+        postalCode: { type: string }
+        deliveryZone: { enum: [DHAKA_INSIDE, OUTSIDE_DHAKA] }
+        instructions: { type: string, maxLength: 500 }
+security: [{ bearerAuth: [] }]
+paths:
+  /products: { get: { security: [], summary: List products, responses: { '200': { description: OK } } } }
+  /products/{slug}: { get: { security: [], summary: Product detail and variant matrix, parameters: [{ in: path, name: slug, required: true, schema: { type: string } }], responses: { '200': { description: OK } } } }
+  /categories: { get: { security: [], summary: List categories, responses: { '200': { description: OK } } } }
+  /categories/{slug}: { parameters: [{ in: path, name: slug, required: true, schema: { type: string } }], get: { security: [], summary: Category detail, responses: { '200': { description: OK } } } }
+  /collections: { get: { security: [], summary: List collections, responses: { '200': { description: OK } } } }
+  /collections/{slug}: { parameters: [{ in: path, name: slug, required: true, schema: { type: string } }], get: { security: [], summary: Collection detail, responses: { '200': { description: OK } } } }
+  /search: { get: { security: [], summary: Search products, responses: { '200': { description: OK } } } }
+  /auth/register: { post: { security: [], summary: Register, responses: { '201': { description: Created } } } }
+  /auth/login: { post: { security: [], summary: Login, responses: { '200': { description: OK } } } }
+  /auth/refresh: { post: { security: [{ refreshCookie: [] }], summary: Rotate refresh token, responses: { '200': { description: OK } } } }
+  /auth/logout: { post: { security: [{ refreshCookie: [] }], summary: Logout, responses: { '200': { description: OK } } } }
+  /auth/forgot-password: { post: { security: [], summary: Request reset, responses: { '200': { description: Enumeration-safe response } } } }
+  /auth/reset-password: { post: { security: [], summary: Reset password, responses: { '200': { description: OK } } } }
+  /auth/verify-email: { post: { security: [], summary: Verify customer email, responses: { '200': { description: OK } } } }
+  /auth/resend-verification: { post: { summary: Resend customer verification, responses: { '200': { description: Queued } } } }
+  /me: { get: { summary: Current customer, responses: { '200': { description: OK } } }, patch: { summary: Update customer, responses: { '200': { description: OK } } } }
+  /addresses: { get: { summary: List addresses, responses: { '200': { description: OK } } }, post: { summary: Create address, responses: { '201': { description: Created } } } }
+  /addresses/{id}: { parameters: [{ in: path, name: id, required: true, schema: { type: string } }], patch: { summary: Update owned address, responses: { '200': { description: OK } } }, delete: { summary: Delete owned address, responses: { '200': { description: OK } } } }
+  /cart: { get: { security: [], summary: Get repriced cart, responses: { '200': { description: OK } } } }
+  /cart/items: { post: { security: [], summary: Add cart item, responses: { '201': { description: Created } } } }
+  /cart/items/{itemId}: { parameters: [{ in: path, name: itemId, required: true, schema: { type: string } }], patch: { security: [], summary: Update cart item, responses: { '200': { description: OK } } }, delete: { security: [], summary: Remove cart item, responses: { '200': { description: OK } } } }
+  /cart/coupon: { post: { security: [], summary: Apply coupon, responses: { '200': { description: OK } } }, delete: { security: [], summary: Remove coupon, responses: { '200': { description: OK } } } }
+  /checkout/preview: { post: { security: [], summary: Authoritative checkout preview, responses: { '200': { description: OK } } } }
+  /orders:
+    post:
+      security: []
+      summary: Transactional idempotent order creation
+      parameters: [{ in: header, name: Idempotency-Key, required: true, schema: { type: string } }]
+      responses: { '201': { description: Created }, '200': { description: Idempotent replay }, '409': { description: Conflict } }
+    get: { summary: Customer order history, responses: { '200': { description: OK } } }
+  /orders/{orderNumber}: { parameters: [{ in: path, name: orderNumber, required: true, schema: { type: string } }], get: { summary: Owned order detail, responses: { '200': { description: OK } } } }
+  /orders/{orderNumber}/cancel: { parameters: [{ in: path, name: orderNumber, required: true, schema: { type: string } }], post: { summary: Cancel eligible order, responses: { '200': { description: OK } } } }
+  /orders/{orderNumber}/return: { parameters: [{ in: path, name: orderNumber, required: true, schema: { type: string } }], post: { summary: Request return, responses: { '200': { description: OK } } } }
+  /orders/track: { post: { security: [], summary: Track using order number and phone, responses: { '200': { description: Privacy-limited result } } } }
+  /wishlist: { get: { summary: List wishlist, responses: { '200': { description: OK } } } }
+  /wishlist/items: { post: { summary: Add wishlist item, responses: { '201': { description: Created } } } }
+  /wishlist/items/{variantId}: { parameters: [{ in: path, name: variantId, required: true, schema: { type: string } }], delete: { summary: Remove wishlist item, responses: { '200': { description: OK } } } }
+  /products/{productId}/reviews: { parameters: [{ in: path, name: productId, required: true, schema: { type: string } }], get: { security: [], summary: Approved reviews, responses: { '200': { description: OK } } }, post: { summary: Create verified review, responses: { '201': { description: Created } } } }
+  /homepage: { get: { security: [], summary: Homepage content, responses: { '200': { description: OK } } } }
+  /settings/public: { get: { security: [], summary: Public settings, responses: { '200': { description: OK } } } }
+  /admin/auth/login: { post: { security: [], summary: Admin login, responses: { '200': { description: OK } } } }
+  /admin/auth/refresh: { post: { security: [{ refreshCookie: [] }], summary: Admin refresh, responses: { '200': { description: OK } } } }
+  /admin/auth/logout: { post: { security: [{ refreshCookie: [] }], summary: Admin logout, responses: { '200': { description: OK } } } }
+  /admin/dashboard: { get: { summary: Dashboard metrics, responses: { '200': { description: OK } } } }
+  /admin/products: { get: { summary: Admin products, responses: { '200': { description: OK } } }, post: { summary: Create product, responses: { '201': { description: Created } } } }
+  /admin/products/{id}: { parameters: [{ in: path, name: id, required: true, schema: { type: string } }], get: { summary: Product editor detail, responses: { '200': { description: OK } } }, patch: { summary: Update product, responses: { '200': { description: OK } } } }
+  /admin/products/{id}/archive: { parameters: [{ in: path, name: id, required: true, schema: { type: string } }], post: { summary: Archive product, responses: { '200': { description: OK } } } }
+  /admin/products/{id}/restore: { parameters: [{ in: path, name: id, required: true, schema: { type: string } }], post: { summary: Restore to draft, responses: { '200': { description: OK } } } }
+  /admin/products/{id}/duplicate: { parameters: [{ in: path, name: id, required: true, schema: { type: string } }], post: { summary: Duplicate product, responses: { '201': { description: Created } } } }
+  /admin/products/{id}/variants: { parameters: [{ in: path, name: id, required: true, schema: { type: string } }], post: { summary: Create zero-stock variant, responses: { '201': { description: Created } } } }
+  /admin/products/{id}/options: { parameters: [{ in: path, name: id, required: true, schema: { type: string } }], post: { summary: Create product option and values, responses: { '201': { description: Created } } } }
+  /admin/products/{id}/images: { parameters: [{ in: path, name: id, required: true, schema: { type: string } }], post: { summary: Attach uploaded product image metadata, responses: { '201': { description: Created } } } }
+  /admin/images/{id}: { parameters: [{ in: path, name: id, required: true, schema: { type: string } }], delete: { summary: Remove image metadata, responses: { '200': { description: OK } } } }
+  /admin/variants/{id}: { parameters: [{ in: path, name: id, required: true, schema: { type: string } }], patch: { summary: Update variant, responses: { '200': { description: OK } } }, delete: { summary: Archive variant, responses: { '200': { description: OK } } } }
+  /admin/inventory: { get: { summary: Inventory, responses: { '200': { description: OK } } } }
+  /admin/inventory/adjust: { post: { summary: Atomic stock movement, responses: { '200': { description: OK } } } }
+  /admin/inventory/movements: { get: { summary: Movement history, responses: { '200': { description: OK } } } }
+  /admin/categories: { get: { summary: Categories, responses: { '200': { description: OK } } }, post: { summary: Create category, responses: { '201': { description: Created } } } }
+  /admin/categories/{id}: { parameters: [{ in: path, name: id, required: true, schema: { type: string } }], patch: { summary: Update category, responses: { '200': { description: OK } } } }
+  /admin/collections: { get: { summary: Collections, responses: { '200': { description: OK } } }, post: { summary: Create collection, responses: { '201': { description: Created } } } }
+  /admin/collections/{id}: { parameters: [{ in: path, name: id, required: true, schema: { type: string } }], patch: { summary: Update collection, responses: { '200': { description: OK } } } }
+  /admin/orders: { get: { summary: Orders, responses: { '200': { description: OK } } } }
+  /admin/orders/{id}: { parameters: [{ in: path, name: id, required: true, schema: { type: string } }], get: { summary: Order detail, responses: { '200': { description: OK } } } }
+  /admin/orders/{id}/status: { parameters: [{ in: path, name: id, required: true, schema: { type: string } }], patch: { summary: Status transition, responses: { '200': { description: OK } } } }
+  /admin/orders/{id}/notes: { parameters: [{ in: path, name: id, required: true, schema: { type: string } }], post: { summary: Internal note, responses: { '201': { description: Created } } } }
+  /admin/orders/{id}/cancel: { parameters: [{ in: path, name: id, required: true, schema: { type: string } }], post: { summary: Cancel and restore once, responses: { '200': { description: OK } } } }
+  /admin/orders/{id}/refund: { parameters: [{ in: path, name: id, required: true, schema: { type: string } }], post: { summary: Record refund, responses: { '200': { description: OK } } } }
+  /admin/customers: { get: { summary: Customers, responses: { '200': { description: OK } } } }
+  /admin/customers/{id}: { parameters: [{ in: path, name: id, required: true, schema: { type: string } }], get: { summary: Customer detail, responses: { '200': { description: OK } } } }
+  /admin/customers/{id}/status: { parameters: [{ in: path, name: id, required: true, schema: { type: string } }], patch: { summary: Suspend or activate, responses: { '200': { description: OK } } } }
+  /admin/coupons: { get: { summary: Coupons, responses: { '200': { description: OK } } }, post: { summary: Create coupon, responses: { '201': { description: Created } } } }
+  /admin/coupons/{id}: { parameters: [{ in: path, name: id, required: true, schema: { type: string } }], patch: { summary: Update coupon, responses: { '200': { description: OK } } } }
+  /admin/reviews: { get: { summary: Review moderation queue, responses: { '200': { description: OK } } } }
+  /admin/reviews/{id}/status: { parameters: [{ in: path, name: id, required: true, schema: { type: string } }], patch: { summary: Moderate review, responses: { '200': { description: OK } } } }
+  /admin/banners: { get: { summary: Banners, responses: { '200': { description: OK } } }, post: { summary: Create banner, responses: { '201': { description: Created } } } }
+  /admin/banners/{id}: { parameters: [{ in: path, name: id, required: true, schema: { type: string } }], patch: { summary: Update banner, responses: { '200': { description: OK } } } }
+  /admin/homepage-sections: { get: { summary: Homepage sections, responses: { '200': { description: OK } } }, post: { summary: Create homepage section, responses: { '201': { description: Created } } } }
+  /admin/homepage-sections/{id}: { parameters: [{ in: path, name: id, required: true, schema: { type: string } }], patch: { summary: Update homepage section, responses: { '200': { description: OK } } } }
+  /admin/settings: { get: { summary: Settings, responses: { '200': { description: OK } } }, patch: { summary: Typed JSON settings, responses: { '200': { description: OK } } } }
+  /admin/users: { get: { summary: Admin users, responses: { '200': { description: OK } } }, post: { summary: Create admin, responses: { '201': { description: Created } } } }
+  /admin/users/{id}: { parameters: [{ in: path, name: id, required: true, schema: { type: string } }], patch: { summary: Update admin and revoke sessions, responses: { '200': { description: OK } } } }
+  /admin/roles: { get: { summary: Roles and permissions, responses: { '200': { description: OK } } }, post: { summary: Create role, responses: { '201': { description: Created } } } }
+  /admin/roles/{id}: { parameters: [{ in: path, name: id, required: true, schema: { type: string } }], patch: { summary: Update role permissions, responses: { '200': { description: OK } } } }
+  /admin/audit-logs: { get: { summary: Sensitive action audit, responses: { '200': { description: OK } } } }
+  /admin/uploads/presign: { post: { summary: Restricted image upload URL, responses: { '200': { description: OK } } } }

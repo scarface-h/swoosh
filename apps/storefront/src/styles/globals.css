@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --color-background: #f5f0e8;
+  --color-surface: #fffdf9;
+  --color-ink: #1a1a1a;
+  --color-muted: #6b6560;
+  --color-line: #ddd8d0;
+  --color-accent: #c44a2d;
+  --color-dark: #151413;
+  --color-light: #faf8f4;
+  --color-success: #287a55;
+  --color-error: #b83232;
+}
+
+html {
+  scroll-behavior: smooth;
+  background: var(--color-background);
+  overflow-x: clip;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  overflow-x: clip;
+  background-color: var(--color-background);
+  color: var(--color-ink);
+  font-family: "Inter", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+#root { min-height: 100dvh; }
+
+button, input, select, textarea { font: inherit; }
+button, a { -webkit-tap-highlight-color: transparent; }
+img { display: block; max-width: 100%; }
+
+@media (max-width: 639px) {
+  body { font-size: 15px; }
+}
+
+::selection {
+  background-color: var(--color-accent);
+  color: white;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
