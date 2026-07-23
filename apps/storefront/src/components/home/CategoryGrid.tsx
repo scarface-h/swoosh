@@ -1,5 +1,3 @@
-import { motion, useInView } from "framer-motion";
-import { useRef } from "react";
 import { Link } from "react-router-dom";
 
 interface CategoryCard {
@@ -16,9 +14,6 @@ export default function CategoryGrid({
   categories: CategoryCard[];
   loading?: boolean;
 }) {
-  const ref = useRef(null);
-  const inView = useInView(ref, { once: true, margin: "-100px" });
-
   if (loading) {
     return (
       <section
@@ -51,15 +46,11 @@ export default function CategoryGrid({
 
   return (
     <section
-      ref={ref}
       className="grid grid-cols-1 gap-1.5 p-1.5 sm:h-[88svh] sm:grid-cols-2 sm:grid-rows-[1.35fr_0.8fr] md:h-screen md:grid-rows-2 md:gap-2 md:p-2"
     >
       {categories.slice(0, 3).map((cat, i) => (
-        <motion.div
+        <div
           key={cat.slug}
-          initial={{ opacity: 0, y: 30 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6, delay: i * 0.15 }}
           className={
             i === 0
               ? "min-h-[62svh] sm:col-span-2 sm:min-h-0 md:col-span-1 md:row-span-2"
@@ -86,7 +77,7 @@ export default function CategoryGrid({
               <p className="text-white/70 text-sm mt-1">Shop →</p>
             </div>
           </Link>
-        </motion.div>
+        </div>
       ))}
     </section>
   );

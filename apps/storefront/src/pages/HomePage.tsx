@@ -120,8 +120,8 @@ export default function HomePage() {
   return (
     <main>
       <HeroSection image={heroImage} />
-      <CategoryGrid categories={categoryCards} loading={loading} />
       <NewArrivalsRail products={newArrivals} />
+      <CategoryGrid categories={categoryCards} loading={loading} />
       <CampaignBanner image={campaignImage} />
       <FeaturedCollections collections={collections} />
       <BestsellerGrid products={featured} />
