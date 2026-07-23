@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: swoosh-commerce-api
+    name: swoosh-shop-api
     runtime: node
     plan: free
     region: singapore
@@ -37,7 +37,7 @@ services:
         value: info
 
   - type: web
-    name: swoosh-commerce-store
+    name: swoosh-shop-store
     runtime: static
     buildCommand: npm ci && npm run build -w apps/storefront
     staticPublishPath: ./apps/storefront/dist
@@ -64,7 +64,7 @@ services:
         destination: /index.html
 
   - type: web
-    name: swoosh-commerce-admin
+    name: swoosh-shop-admin
     runtime: static
     buildCommand: npm ci && npm run build -w apps/admin
     staticPublishPath: ./apps/admin/dist

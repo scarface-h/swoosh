@@ -3,7 +3,7 @@ export const openapiDocument = {
   info: {
     title: 'Swoosh Commerce API',
     version: '1.0.0',
-    description: 'Authoritative REST API for the Bangladesh-focused Swoosh commerce platform.',
+    description: 'Authoritative REST API for the Bangladesh-focused Swoosh Shop platform.',
   },
   servers: [{ url: '/api/v1' }],
   security: [{ bearerAuth: [] }],

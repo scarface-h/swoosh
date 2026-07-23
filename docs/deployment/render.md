@@ -2,9 +2,9 @@
 
 `render.yaml` defines three services:
 
-- `swoosh-commerce-api`: free Node.js web service in Singapore
-- `swoosh-commerce-store`: storefront static site
-- `swoosh-commerce-admin`: admin static site
+- `swoosh-shop-api`: free Node.js web service in Singapore
+- `swoosh-shop-store`: storefront static site
+- `swoosh-shop-admin`: admin static site
 
 TiDB Cloud remains the database and Cloudinary stores product images. Render's
 local filesystem is not used for persistent data.
@@ -25,14 +25,14 @@ Render prompts for every variable marked `sync: false`. Use:
 | Service | Variable | Value |
 | --- | --- | --- |
 | API | `DATABASE_URL` | TiDB URL with `sslaccept=strict`; omit the local Windows `sslcert` path |
-| API | `CORS_ORIGINS` | `https://swoosh-commerce-store.onrender.com,https://swoosh-commerce-admin.onrender.com` |
-| API | `STOREFRONT_URL` | `https://swoosh-store.onrender.com` |
-| API | `ADMIN_URL` | `https://swoosh-admin.onrender.com` |
+| API | `CORS_ORIGINS` | `https://swoosh-shop-store.onrender.com,https://swoosh-shop-admin.onrender.com` |
+| API | `STOREFRONT_URL` | `https://swoosh-shop-store.onrender.com` |
+| API | `ADMIN_URL` | `https://swoosh-shop-admin.onrender.com` |
 | API | `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name |
 | API | `CLOUDINARY_API_KEY` | Cloudinary API key |
 | API | `CLOUDINARY_API_SECRET` | Cloudinary API secret |
-| Storefront | `VITE_API_BASE_URL` | `https://swoosh-commerce-api.onrender.com/api/v1` |
-| Admin | `VITE_API_BASE_URL` | `https://swoosh-commerce-api.onrender.com/api/v1` |
+| Storefront | `VITE_API_BASE_URL` | `https://swoosh-shop-api.onrender.com/api/v1` |
+| Admin | `VITE_API_BASE_URL` | `https://swoosh-shop-api.onrender.com/api/v1` |
 
 If Render assigns different service subdomains, replace the example URLs with
 the actual HTTPS URLs, then redeploy both static sites and the API.
@@ -71,10 +71,10 @@ Do not place a seed command in every Render build.
 Open:
 
 ```text
-https://swoosh-commerce-api.onrender.com/health
-https://swoosh-commerce-api.onrender.com/ready
-https://swoosh-commerce-store.onrender.com
-https://swoosh-commerce-admin.onrender.com/login
+https://swoosh-shop-api.onrender.com/health
+https://swoosh-shop-api.onrender.com/ready
+https://swoosh-shop-store.onrender.com
+https://swoosh-shop-admin.onrender.com/login
 ```
 
 Then verify login, refresh the admin page to confirm session restoration, sign

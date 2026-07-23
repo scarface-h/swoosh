@@ -1,4 +1,4 @@
-# Swoosh commerce platform
+# Swoosh Shop platform
 
 Monorepo for the storefront, admin application and production API. Backend setup and operational documentation begins at [apps/api/README.md](apps/api/README.md) and [docs/backend/architecture.md](docs/backend/architecture.md). Render deployment is documented at [docs/deployment/render.md](docs/deployment/render.md). API integration contracts are in `packages/contracts`, `packages/shared-types` and `docs/api/openapi.yaml`.
 

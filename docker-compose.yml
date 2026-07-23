@@ -1,4 +1,4 @@
-name: swoosh-commerce
+name: swoosh-shop
 
 services:
   mysql:
