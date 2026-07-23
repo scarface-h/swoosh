@@ -10,6 +10,8 @@ export type CartItem = {
   unitPrice: number;
   quantity: number;
   maxStock: number;
+  giftRequested?: boolean;
+  giftMessage?: string;
 };
 
 export type Cart = {

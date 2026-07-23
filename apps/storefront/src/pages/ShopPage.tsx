@@ -170,6 +170,9 @@ export default function ShopPage() {
   const size = searchParams.get("size") ?? "";
   const inStock = searchParams.get("inStock") === "true";
   const sort = searchParams.get("sort") ?? "newest";
+  const minPrice = searchParams.get("minPrice") ?? "";
+  const maxPrice = searchParams.get("maxPrice") ?? "";
+  const offer = searchParams.get("offer") ?? "";
   const department = categories.find((item) => item.slug === departmentSlug);
   const visibleCategories = department?.children ?? categories;
   const catalogueCategory = category || departmentSlug;
@@ -190,12 +193,15 @@ export default function ShopPage() {
       if (catalogueCategory) query.set("category", catalogueCategory);
       if (size) query.set("size", size);
       if (inStock) query.set("inStock", "true");
+      if (minPrice) query.set("minPrice", minPrice);
+      if (maxPrice) query.set("maxPrice", maxPrice);
+      if (offer) query.set("offer", offer);
       const requestedSearch = searchParams.get("search");
       if (requestedSearch) query.set("search", requestedSearch);
       if (searchParams.get("filter") === "new") query.set("newArrival", "true");
       return query.toString();
     },
-    [catalogueCategory, inStock, searchParams, size, sort],
+    [catalogueCategory, inStock, maxPrice, minPrice, offer, searchParams, size, sort],
   );
 
   const load = useCallback(
@@ -282,6 +288,34 @@ export default function ShopPage() {
               )}
             </button>
           ))}
+        </div>
+      </FilterSection>
+      <FilterSection title="Special Offers">
+        <div className="space-y-1">
+          {[
+            ["mega-deal", "⚡ Mega Deal"],
+            ["new-arrival", "⚡ New Arrival"],
+            ["top-selling", "⚡ Top Selling"],
+            ["free-delivery", "⚡ Free Delivery"],
+            ["merchandise", "⚡ Merchandise"],
+          ].map(([value, text]) => (
+            <button type="button" key={value} onClick={() => updateFilter("offer", offer === value ? "" : value)}
+              className={cn("block min-h-9 w-full px-2 text-left text-sm", offer === value ? "bg-red-50 font-medium text-red-600" : "text-muted")}>
+              {text}
+            </button>
+          ))}
+        </div>
+      </FilterSection>
+      <FilterSection title="Price">
+        <div className="grid grid-cols-2 gap-3">
+          <label className="text-xs text-muted">Min ৳
+            <input type="number" min={0} value={minPrice} onChange={(e) => updateFilter("minPrice", e.target.value)}
+              className="mt-1 min-h-10 w-full border border-line bg-white px-2 text-sm text-ink" />
+          </label>
+          <label className="text-xs text-muted">Max ৳
+            <input type="number" min={0} value={maxPrice} onChange={(e) => updateFilter("maxPrice", e.target.value)}
+              className="mt-1 min-h-10 w-full border border-line bg-white px-2 text-sm text-ink" />
+          </label>
         </div>
       </FilterSection>
       <FilterSection title="Size">

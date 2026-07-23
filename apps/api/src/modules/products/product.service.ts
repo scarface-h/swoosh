@@ -15,6 +15,7 @@ export interface ProductListQuery {
   inStock?: boolean;
   featured?: boolean;
   newArrival?: boolean;
+  offer?: 'mega-deal' | 'new-arrival' | 'top-selling' | 'free-delivery' | 'merchandise';
   search?: string;
   ids?: string[];
   sort?: 'newest' | 'price_asc' | 'price_desc' | 'popular' | 'discount';
@@ -71,6 +72,19 @@ function serializeProduct(p: any) {
     tags: Array.isArray(p.tags) ? p.tags : [],
     isFeatured: p.isFeatured,
     isNewArrival: p.isNewArrival,
+    isMegaDeal: p.isMegaDeal,
+    isTopSelling: p.isTopSelling,
+    hasFreeDelivery: p.hasFreeDelivery,
+    isMerchandise: p.isMerchandise,
+    isGiftable: p.isGiftable,
+    couponEligible: p.couponEligible,
+    conditionLabel: p.conditionLabel,
+    detailsAndCare: p.showDetailsCare ? p.detailsAndCare : null,
+    sizeChart: p.showSizeChart && Array.isArray(p.sizeChart) ? p.sizeChart : null,
+    warrantyInfo: p.showWarranty ? p.warrantyInfo : null,
+    deliveryInfo: p.deliveryInfo,
+    exchangePolicy: p.exchangePolicy,
+    giftDescription: p.isGiftable ? p.giftDescription : null,
     seoTitle: p.seoTitle,
     seoDescription: p.seoDescription,
     priceFrom: prices.length ? money(Math.min(...prices)) : money(p.regularPrice.toString()),
@@ -122,6 +136,11 @@ export async function listProducts(q: ProductListQuery) {
   if (q.collection) where.collections = { some: { collection: { slug: q.collection } } };
   if (q.featured) where.isFeatured = true;
   if (q.newArrival) where.isNewArrival = true;
+  if (q.offer === 'mega-deal') where.isMegaDeal = true;
+  if (q.offer === 'new-arrival') where.isNewArrival = true;
+  if (q.offer === 'top-selling') where.isTopSelling = true;
+  if (q.offer === 'free-delivery') where.hasFreeDelivery = true;
+  if (q.offer === 'merchandise') where.isMerchandise = true;
   if (q.minPrice != null || q.maxPrice != null) {
     where.regularPrice = {};
     if (q.minPrice != null) where.regularPrice.gte = q.minPrice;

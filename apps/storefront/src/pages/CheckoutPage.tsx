@@ -71,6 +71,8 @@ export default function CheckoutPage() {
   const [submitting, setSubmitting] = useState(false);
   const [requestError, setRequestError] = useState("");
   const [order, setOrder] = useState<OrderResponse | null>(null);
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState("");
   const idempotencyKey = useRef<string | null>(null);
 
   const deliveryZone =
@@ -93,7 +95,11 @@ export default function CheckoutPage() {
     apiFetch<PreviewResponse>("/checkout/preview", {
       method: "POST",
       signal: controller.signal,
-      body: { items: lines, deliveryZone },
+      body: {
+        items: lines,
+        deliveryZone,
+        ...(appliedCoupon ? { couponCode: appliedCoupon } : {}),
+      },
     })
       .then((result) => {
         setPricing(result.pricing);
@@ -114,7 +120,7 @@ export default function CheckoutPage() {
       });
 
     return () => controller.abort();
-  }, [form.division, JSON.stringify(lines), deliveryZone]);
+  }, [form.division, JSON.stringify(lines), deliveryZone, appliedCoupon]);
 
   if (!items.length && !order) {
     return (
@@ -165,6 +171,11 @@ export default function CheckoutPage() {
     idempotencyKey.current ??= crypto.randomUUID();
 
     try {
+      const giftInstructions = items
+        .filter((item) => item.giftRequested)
+        .map((item) => `Gift: ${item.productName}${item.giftMessage ? ` — ${item.giftMessage}` : ""}`)
+        .join("\n");
+      const instructions = [form.notes.trim(), giftInstructions].filter(Boolean).join("\n");
       const created = await apiFetch<OrderResponse>("/orders", {
         method: "POST",
         headers: { "Idempotency-Key": idempotencyKey.current },
@@ -180,9 +191,10 @@ export default function CheckoutPage() {
             area: form.area.trim(),
             addressLine: form.address.trim(),
             deliveryZone,
-            ...(form.notes.trim() ? { instructions: form.notes.trim() } : {}),
+            ...(instructions ? { instructions } : {}),
           },
           items: lines,
+          ...(appliedCoupon ? { couponCode: appliedCoupon } : {}),
           clientGrandTotal: Number(pricing.grandTotal),
         },
       });
@@ -399,6 +411,7 @@ export default function CheckoutPage() {
                         .filter(Boolean)
                         .join(" / ")}
                     </p>
+                    {item.giftRequested && <p className="mt-1 text-xs text-success">Gift option selected</p>}
                     <div className="mt-2 flex justify-between text-muted">
                       <span>Qty: {item.quantity}</span>
                       <span>
@@ -408,6 +421,16 @@ export default function CheckoutPage() {
                   </div>
                 </div>
               ))}
+            </div>
+            <div className="mb-5 border-t border-line pt-4">
+              <label className="mb-2 block text-xs uppercase tracking-wider text-muted">Coupon code</label>
+              <div className="flex gap-2">
+                <input value={couponCode} onChange={(event) => setCouponCode(event.target.value.toUpperCase())}
+                  placeholder="Enter code" className="min-h-11 min-w-0 flex-1 border border-line bg-transparent px-3 text-sm uppercase outline-none focus:border-ink" />
+                <button type="button" disabled={!couponCode.trim()} onClick={() => setAppliedCoupon(couponCode.trim().toUpperCase())}
+                  className="min-h-11 border border-ink px-4 text-xs font-medium uppercase disabled:opacity-40">Apply</button>
+              </div>
+              {appliedCoupon && <button type="button" className="mt-2 text-xs text-success underline" onClick={() => { setAppliedCoupon(""); setCouponCode(""); }}>Applied: {appliedCoupon} — remove</button>}
             </div>
 
             {previewing ? (

@@ -13,6 +13,7 @@ import { useUiStore } from "./stores/uiStore";
 import AdminUsersPage from "./pages/AdminUsersPage";
 import ReviewsPage from "./pages/ReviewsPage";
 import HelpDeskPage from "./pages/HelpDeskPage";
+import PromotionsPage from "./pages/PromotionsPage";
 
 export default function App() {
   const theme = useUiStore((state) => state.theme);
@@ -39,6 +40,7 @@ export default function App() {
           <Route path="/orders" element={<OrdersPage />} />
           <Route path="/customers" element={<CustomersPage />} />
           <Route path="/reviews" element={<ReviewsPage />} />
+          <Route path="/promotions" element={<PromotionsPage />} />
           <Route path="/users" element={<AdminUsersPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/help-desk" element={<HelpDeskPage />} />

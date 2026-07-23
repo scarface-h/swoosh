@@ -75,6 +75,22 @@ interface ProductDetail {
   status: "DRAFT" | "ACTIVE" | "ARCHIVED";
   isFeatured: boolean;
   isNewArrival: boolean;
+  isMegaDeal: boolean;
+  isTopSelling: boolean;
+  hasFreeDelivery: boolean;
+  isMerchandise: boolean;
+  isGiftable: boolean;
+  couponEligible: boolean;
+  conditionLabel: string | null;
+  detailsAndCare: string | null;
+  showDetailsCare: boolean;
+  sizeChart: Array<{ size?: string; measurements?: string }> | null;
+  showSizeChart: boolean;
+  warrantyInfo: string | null;
+  showWarranty: boolean;
+  deliveryInfo: string | null;
+  exchangePolicy: string | null;
+  giftDescription: string | null;
   tags: string[];
   seoTitle: string | null;
   seoDescription: string | null;
@@ -249,6 +265,22 @@ export default function ProductEditModal({
           status: product.status,
           isFeatured: product.isFeatured,
           isNewArrival: product.isNewArrival,
+          isMegaDeal: product.isMegaDeal,
+          isTopSelling: product.isTopSelling,
+          hasFreeDelivery: product.hasFreeDelivery,
+          isMerchandise: product.isMerchandise,
+          isGiftable: product.isGiftable,
+          couponEligible: product.couponEligible,
+          conditionLabel: emptyToNull(product.conditionLabel),
+          detailsAndCare: emptyToNull(product.detailsAndCare),
+          showDetailsCare: product.showDetailsCare,
+          sizeChart: product.sizeChart,
+          showSizeChart: product.showSizeChart,
+          warrantyInfo: emptyToNull(product.warrantyInfo),
+          showWarranty: product.showWarranty,
+          deliveryInfo: emptyToNull(product.deliveryInfo),
+          exchangePolicy: emptyToNull(product.exchangePolicy),
+          giftDescription: emptyToNull(product.giftDescription),
           tags: product.tags,
           seoTitle: emptyToNull(product.seoTitle),
           seoDescription: emptyToNull(product.seoDescription),
@@ -801,6 +833,18 @@ export default function ProductEditModal({
                       />
                     </Field>
                   ))}
+                </div>
+              </Panel>
+              <Panel title="Commerce information">
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <Field title="Product status / condition"><input className={input} value={product.conditionLabel ?? ""} onChange={(e) => update("conditionLabel", e.target.value)} /></Field>
+                  <label className="flex items-center gap-2 pt-8 text-sm"><input type="checkbox" checked={product.couponEligible} onChange={(e) => update("couponEligible", e.target.checked)} /> Coupon eligible</label>
+                  <Field title="Details and care"><textarea className={`${input} py-3`} rows={5} value={product.detailsAndCare ?? ""} onChange={(e) => update("detailsAndCare", e.target.value)} /><label className="mt-2 flex gap-2 text-sm"><input type="checkbox" checked={product.showDetailsCare} onChange={(e) => update("showDetailsCare", e.target.checked)} /> Show on storefront</label></Field>
+                  <Field title="Size chart (Size | Measurements per line)"><textarea className={`${input} py-3`} rows={5} value={(product.sizeChart ?? []).map((row) => `${row.size ?? ""} | ${row.measurements ?? ""}`).join("\n")} onChange={(e) => update("sizeChart", e.target.value.split("\n").filter(Boolean).map((line) => { const [size, ...rest] = line.split("|"); return { size: size.trim(), measurements: rest.join("|").trim() }; }))} /><label className="mt-2 flex gap-2 text-sm"><input type="checkbox" checked={product.showSizeChart} onChange={(e) => update("showSizeChart", e.target.checked)} /> Show on storefront</label></Field>
+                  <Field title="Warranty information"><textarea className={`${input} py-3`} rows={4} value={product.warrantyInfo ?? ""} onChange={(e) => update("warrantyInfo", e.target.value)} /><label className="mt-2 flex gap-2 text-sm"><input type="checkbox" checked={product.showWarranty} onChange={(e) => update("showWarranty", e.target.checked)} /> Show warranty</label></Field>
+                  <Field title="Delivery information override"><textarea className={`${input} py-3`} rows={4} value={product.deliveryInfo ?? ""} onChange={(e) => update("deliveryInfo", e.target.value)} /></Field>
+                  <Field title="Delivery & exchange policy override"><textarea className={`${input} py-3`} rows={4} value={product.exchangePolicy ?? ""} onChange={(e) => update("exchangePolicy", e.target.value)} /></Field>
+                  <div className="sm:col-span-2"><label className="flex gap-2 text-sm"><input type="checkbox" checked={product.isGiftable} onChange={(e) => update("isGiftable", e.target.checked)} /> Gift option available</label>{product.isGiftable && <input className={`${input} mt-2`} value={product.giftDescription ?? ""} onChange={(e) => update("giftDescription", e.target.value)} placeholder="Gift wrap, message or included gift details" />}</div>
                 </div>
               </Panel>
               <Panel title="Description and pricing">
@@ -1640,6 +1684,17 @@ export default function ProductEditModal({
                       />{" "}
                       Show in Crafted for You / Featured
                     </label>
+                    {[
+                      ["isMegaDeal", "Mega Deal"],
+                      ["isTopSelling", "Top Selling"],
+                      ["hasFreeDelivery", "Free Delivery"],
+                      ["isMerchandise", "Merchandise"],
+                    ].map(([key, text]) => (
+                      <label key={key} className="flex min-h-11 items-center gap-3 rounded-xl border border-line px-4 text-sm">
+                        <input type="checkbox" checked={Boolean(product[key as keyof ProductDetail])}
+                          onChange={(e) => update(key as "isMegaDeal", e.target.checked)} /> {text}
+                      </label>
+                    ))}
                   </div>
                 </div>
                 <div className="mt-6">

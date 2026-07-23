@@ -27,6 +27,16 @@ export default function SettingsPage() {
   const [storeName, setStoreName] = useState("Swoosh Shop");
   const [maintenanceActive, setMaintenanceActive] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState("");
+  const [delivery, setDelivery] = useState({
+    insideCharge: 100,
+    insideFreeAbove: 0,
+    insideActive: true,
+    outsideCharge: 150,
+    outsideFreeAbove: 0,
+    outsideActive: true,
+    deliveryText: "Delivery across Bangladesh in 2–5 business days.",
+    exchangeText: "Exchange requests are accepted according to the store policy.",
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -47,6 +57,25 @@ export default function SettingsPage() {
       .then((settings) => {
         const name = settings.find((item) => item.key === "store.name");
         const maintenance = settings.find((item) => item.key === "maintenance");
+        const inside = settings.find((item) => item.key === "delivery.dhaka_inside")?.value as
+          | { charge?: number; freeAbove?: number; active?: boolean }
+          | undefined;
+        const outside = settings.find((item) => item.key === "delivery.outside_dhaka")?.value as
+          | { charge?: number; freeAbove?: number; active?: boolean }
+          | undefined;
+        const policy = settings.find((item) => item.key === "policy.delivery_exchange")?.value as
+          | { deliveryText?: string; exchangeText?: string }
+          | undefined;
+        setDelivery((current) => ({
+          insideCharge: inside?.charge ?? current.insideCharge,
+          insideFreeAbove: inside?.freeAbove ?? current.insideFreeAbove,
+          insideActive: inside?.active ?? current.insideActive,
+          outsideCharge: outside?.charge ?? current.outsideCharge,
+          outsideFreeAbove: outside?.freeAbove ?? current.outsideFreeAbove,
+          outsideActive: outside?.active ?? current.outsideActive,
+          deliveryText: policy?.deliveryText ?? current.deliveryText,
+          exchangeText: policy?.exchangeText ?? current.exchangeText,
+        }));
         if (typeof name?.value === "string") setStoreName(name.value);
         if (
           maintenance?.value &&
@@ -89,6 +118,32 @@ export default function SettingsPage() {
                 ...(maintenanceMessage.trim()
                   ? { message: maintenanceMessage.trim() }
                   : {}),
+              },
+              isPublic: true,
+            },
+            {
+              key: "delivery.dhaka_inside",
+              value: {
+                charge: delivery.insideCharge,
+                active: delivery.insideActive,
+                ...(delivery.insideFreeAbove > 0 ? { freeAbove: delivery.insideFreeAbove } : {}),
+              },
+              isPublic: true,
+            },
+            {
+              key: "delivery.outside_dhaka",
+              value: {
+                charge: delivery.outsideCharge,
+                active: delivery.outsideActive,
+                ...(delivery.outsideFreeAbove > 0 ? { freeAbove: delivery.outsideFreeAbove } : {}),
+              },
+              isPublic: true,
+            },
+            {
+              key: "policy.delivery_exchange",
+              value: {
+                deliveryText: delivery.deliveryText,
+                exchangeText: delivery.exchangeText,
               },
               isPublic: true,
             },
@@ -290,6 +345,50 @@ export default function SettingsPage() {
               <span className="mt-1.5 block text-xs text-muted">
                 {maintenanceMessage.length}/500 characters
               </span>
+            </label>
+            <div className="grid gap-4 border-t border-line pt-6 sm:grid-cols-2">
+              {[
+                ["inside", "Inside Dhaka"],
+                ["outside", "Outside Dhaka"],
+              ].map(([key, label]) => {
+                const prefix = key === "inside" ? "inside" : "outside";
+                const chargeKey = `${prefix}Charge` as "insideCharge" | "outsideCharge";
+                const freeKey = `${prefix}FreeAbove` as "insideFreeAbove" | "outsideFreeAbove";
+                const activeKey = `${prefix}Active` as "insideActive" | "outsideActive";
+                return (
+                  <fieldset key={key} className="rounded-xl border border-line p-4">
+                    <legend className="px-2 text-sm font-semibold text-ink">{label}</legend>
+                    <label className="mb-3 flex items-center gap-2 text-sm">
+                      <input type="checkbox" checked={delivery[activeKey]} onChange={(event) =>
+                        setDelivery((current) => ({ ...current, [activeKey]: event.target.checked }))
+                      } />
+                      Delivery available
+                    </label>
+                    <label className="block text-xs text-muted">Charge (BDT)
+                      <input type="number" min={0} value={delivery[chargeKey]} onChange={(event) =>
+                        setDelivery((current) => ({ ...current, [chargeKey]: Number(event.target.value) }))
+                      } className="mt-1 min-h-11 w-full rounded-xl border border-line bg-white px-3 text-ink" />
+                    </label>
+                    <label className="mt-3 block text-xs text-muted">Free delivery above (0 disables)
+                      <input type="number" min={0} value={delivery[freeKey]} onChange={(event) =>
+                        setDelivery((current) => ({ ...current, [freeKey]: Number(event.target.value) }))
+                      } className="mt-1 min-h-11 w-full rounded-xl border border-line bg-white px-3 text-ink" />
+                    </label>
+                  </fieldset>
+                );
+              })}
+            </div>
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-medium text-ink">Delivery policy</span>
+              <textarea rows={4} maxLength={10000} value={delivery.deliveryText}
+                onChange={(event) => setDelivery((current) => ({ ...current, deliveryText: event.target.value }))}
+                className="w-full rounded-xl border border-line bg-white px-3 py-3 text-sm text-ink" />
+            </label>
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-medium text-ink">Delivery & exchange policy</span>
+              <textarea rows={5} maxLength={10000} value={delivery.exchangeText}
+                onChange={(event) => setDelivery((current) => ({ ...current, exchangeText: event.target.value }))}
+                className="w-full rounded-xl border border-line bg-white px-3 py-3 text-sm text-ink" />
             </label>
             <SaveButton saving={saving} />
           </form>

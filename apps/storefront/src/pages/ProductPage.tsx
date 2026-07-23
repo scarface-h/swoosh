@@ -33,7 +33,11 @@ export default function ProductPage() {
   const [activeImage, setActiveImage] = useState(0);
   const [selections, setSelections] = useState<Record<string, string>>({});
   const [quantity, setQuantity] = useState(1);
-  const [accordion, setAccordion] = useState<"details" | "shipping" | null>(
+  const [giftRequested, setGiftRequested] = useState(false);
+  const [giftMessage, setGiftMessage] = useState("");
+  const [accordion, setAccordion] = useState<
+    "details" | "care" | "size" | "warranty" | "shipping" | null
+  >(
     "details",
   );
   const [stickyVisible, setStickyVisible] = useState(false);
@@ -192,6 +196,9 @@ export default function ProductPage() {
       unitPrice: currentPrice,
       quantity,
       maxStock: selectedVariant.stock,
+      giftRequested: product.isGiftable && giftRequested,
+      giftMessage:
+        product.isGiftable && giftRequested ? giftMessage.trim() : undefined,
     });
   };
 
@@ -386,8 +393,34 @@ export default function ProductPage() {
           </button>
 
           <p className="flex items-center gap-2 text-xs text-muted">
-            <Truck size={16} /> Delivery across Bangladesh in 2–5 business days.
+            <Truck size={16} />{" "}
+            {product.hasFreeDelivery
+              ? "Free delivery for this product."
+              : product.deliveryInfo ||
+                "Delivery across Bangladesh in 2–5 business days."}
           </p>
+          {product.conditionLabel && (
+            <p className="text-xs font-medium uppercase tracking-wider text-success">
+              Status: {product.conditionLabel}
+            </p>
+          )}
+          {product.isGiftable && (
+            <div className="border border-line p-4 text-sm">
+              <label className="flex cursor-pointer items-center gap-2 font-medium">
+                <input type="checkbox" checked={giftRequested} onChange={(event) => setGiftRequested(event.target.checked)} />
+                Send this as a gift
+              </label>
+              <p className="mt-1 text-muted">
+                {product.giftDescription ||
+                  "Request gift presentation in the checkout delivery instructions."}
+              </p>
+              {giftRequested && (
+                <textarea value={giftMessage} onChange={(event) => setGiftMessage(event.target.value)}
+                  maxLength={300} rows={2} placeholder="Optional gift message"
+                  className="mt-3 w-full border border-line bg-transparent p-3 outline-none focus:border-ink" />
+              )}
+            </div>
+          )}
 
           <div className="border-t border-line">
             <button
@@ -444,6 +477,43 @@ export default function ProductPage() {
                 )}
               </div>
             )}
+            {[
+              {
+                id: "care" as const,
+                title: "Details & Care",
+                content: product.detailsAndCare,
+              },
+              {
+                id: "warranty" as const,
+                title: "Warranty Information",
+                content: product.warrantyInfo,
+              },
+            ].map((section) =>
+              section.content ? (
+                <div key={section.id}>
+                  <button type="button" onClick={() => setAccordion(accordion === section.id ? null : section.id)}
+                    className="flex min-h-14 w-full items-center justify-between border-b border-line text-sm font-medium">
+                    {section.title}<ChevronDown size={16} className={cn("transition-transform", accordion === section.id && "rotate-180")} />
+                  </button>
+                  {accordion === section.id && <p className="whitespace-pre-line border-b border-line py-4 text-sm leading-relaxed text-muted">{section.content}</p>}
+                </div>
+              ) : null,
+            )}
+            {product.sizeChart?.length ? (
+              <div>
+                <button type="button" onClick={() => setAccordion(accordion === "size" ? null : "size")}
+                  className="flex min-h-14 w-full items-center justify-between border-b border-line text-sm font-medium">
+                  Size Chart<ChevronDown size={16} className={cn("transition-transform", accordion === "size" && "rotate-180")} />
+                </button>
+                {accordion === "size" && (
+                  <div className="overflow-x-auto border-b border-line py-3 text-sm text-muted">
+                    <table className="w-full text-left"><thead><tr><th className="border-b border-line py-2">Size</th><th className="border-b border-line py-2">Measurements</th></tr></thead>
+                      <tbody>{product.sizeChart.map((row, index) => <tr key={index}><td className="border-b border-line py-2 font-medium text-ink">{row.size}</td><td className="border-b border-line py-2">{row.measurements}</td></tr>)}</tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            ) : null}
             <button
               type="button"
               onClick={() =>
@@ -464,13 +534,13 @@ export default function ProductPage() {
               <div className="space-y-3 border-b border-line py-4 text-sm text-muted">
                 <p className="flex gap-2">
                   <Truck size={16} className="mt-0.5 shrink-0" />
-                  Dhaka delivery usually takes 2–3 business days; elsewhere
-                  usually takes 3–5.
+                  {product.deliveryInfo ||
+                    "Delivery across Bangladesh in 2–5 business days."}
                 </p>
                 <p className="flex gap-2">
                   <RotateCcw size={16} className="mt-0.5 shrink-0" />
-                  Exchanges are accepted within 7 days for unworn items with
-                  original tags.
+                  {product.exchangePolicy ||
+                    "Exchange requests are accepted within 7 days for eligible unused items with original packaging and tags."}
                 </p>
               </div>
             )}

@@ -223,6 +223,22 @@ export default function ProductCreateModal({
     collectionIds: [] as string[],
     isFeatured: false,
     isNewArrival: false,
+    isMegaDeal: false,
+    isTopSelling: false,
+    hasFreeDelivery: false,
+    isMerchandise: false,
+    isGiftable: false,
+    couponEligible: true,
+    conditionLabel: "New",
+    detailsAndCare: "",
+    showDetailsCare: false,
+    sizeChart: "",
+    showSizeChart: false,
+    warrantyInfo: "",
+    showWarranty: false,
+    deliveryInfo: "",
+    exchangePolicy: "",
+    giftDescription: "",
     seoTitle: "",
     seoDescription: "",
   });
@@ -641,6 +657,27 @@ export default function ProductCreateModal({
               status: form.status,
               isFeatured: form.isFeatured,
               isNewArrival: form.isNewArrival,
+              isMegaDeal: form.isMegaDeal,
+              isTopSelling: form.isTopSelling,
+              hasFreeDelivery: form.hasFreeDelivery,
+              isMerchandise: form.isMerchandise,
+              isGiftable: form.isGiftable,
+              couponEligible: form.couponEligible,
+              conditionLabel: form.conditionLabel.trim() || null,
+              detailsAndCare: form.detailsAndCare.trim() || null,
+              showDetailsCare: form.showDetailsCare,
+              sizeChart: form.sizeChart.trim()
+                ? form.sizeChart.trim().split("\n").filter(Boolean).map((line) => {
+                    const [size, ...measurements] = line.split("|").map((value) => value.trim());
+                    return { size, measurements: measurements.join(" | ") };
+                  })
+                : null,
+              showSizeChart: form.showSizeChart,
+              warrantyInfo: form.warrantyInfo.trim() || null,
+              showWarranty: form.showWarranty,
+              deliveryInfo: form.deliveryInfo.trim() || null,
+              exchangePolicy: form.exchangePolicy.trim() || null,
+              giftDescription: form.giftDescription.trim() || null,
               tags: form.tags
                 .split(",")
                 .map((tag) => tag.trim())
@@ -1106,6 +1143,33 @@ export default function ProductCreateModal({
                         </button>
                       </div>
                     ))}
+                  </div>
+                </div>
+                <div className="mt-7 border-t border-line pt-6">
+                  <h4 className="font-semibold">Commerce information</h4>
+                  <p className="mt-1 text-sm text-muted">Use only the sections relevant to this product. Hidden sections are never shown on the storefront.</p>
+                  <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                    <label><span className={labelClass}>Product status / condition</span>
+                      <input value={form.conditionLabel} onChange={(e) => update("conditionLabel", e.target.value)} className={inputClass} placeholder="New, pre-order, refurbished…" />
+                    </label>
+                    <label className="flex items-center gap-2 pt-8 text-sm"><input type="checkbox" checked={form.couponEligible} onChange={(e) => update("couponEligible", e.target.checked)} /> Coupon eligible</label>
+                    <label className="sm:col-span-2"><span className={labelClass}>Details and care</span>
+                      <textarea rows={5} value={form.detailsAndCare} onChange={(e) => update("detailsAndCare", e.target.value)} className={`${inputClass} py-3`} placeholder="Material, fit, washing, drying and care instructions" />
+                      <span className="mt-2 flex gap-2 text-sm"><input type="checkbox" checked={form.showDetailsCare} onChange={(e) => update("showDetailsCare", e.target.checked)} /> Show Details & Care on storefront</span>
+                    </label>
+                    <label className="sm:col-span-2"><span className={labelClass}>Size chart (one row per line: Size | Measurements)</span>
+                      <textarea rows={5} value={form.sizeChart} onChange={(e) => update("sizeChart", e.target.value)} className={`${inputClass} py-3`} placeholder={"S | Chest 36–38 in | Length 27 in\nM | Chest 39–41 in | Length 28 in"} />
+                      <span className="mt-2 flex gap-2 text-sm"><input type="checkbox" checked={form.showSizeChart} onChange={(e) => update("showSizeChart", e.target.checked)} /> Show size chart on storefront</span>
+                    </label>
+                    <label className="sm:col-span-2"><span className={labelClass}>Warranty information</span>
+                      <textarea rows={3} value={form.warrantyInfo} onChange={(e) => update("warrantyInfo", e.target.value)} className={`${inputClass} py-3`} />
+                      <span className="mt-2 flex gap-2 text-sm"><input type="checkbox" checked={form.showWarranty} onChange={(e) => update("showWarranty", e.target.checked)} /> Show warranty</span>
+                    </label>
+                    <label><span className={labelClass}>Product delivery information (optional override)</span><textarea rows={4} value={form.deliveryInfo} onChange={(e) => update("deliveryInfo", e.target.value)} className={`${inputClass} py-3`} /></label>
+                    <label><span className={labelClass}>Delivery & exchange policy (optional override)</span><textarea rows={4} value={form.exchangePolicy} onChange={(e) => update("exchangePolicy", e.target.value)} className={`${inputClass} py-3`} /></label>
+                    <label className="sm:col-span-2"><span className="flex gap-2 text-sm font-medium"><input type="checkbox" checked={form.isGiftable} onChange={(e) => update("isGiftable", e.target.checked)} /> Gift option available</span>
+                      {form.isGiftable && <input value={form.giftDescription} onChange={(e) => update("giftDescription", e.target.value)} className={`${inputClass} mt-2`} placeholder="Gift wrap/message instructions or included gift" />}
+                    </label>
                   </div>
                 </div>
               </section>
@@ -1749,6 +1813,18 @@ export default function ProductCreateModal({
                       />
                       Show in New Arrivals / Just Dropped
                     </label>
+                    {[
+                      ["isMegaDeal", "Mega Deal"],
+                      ["isTopSelling", "Top Selling"],
+                      ["hasFreeDelivery", "Free Delivery"],
+                      ["isMerchandise", "Merchandise"],
+                    ].map(([key, text]) => (
+                      <label key={key} className="flex min-h-11 items-center gap-3 rounded-xl border border-line px-3 text-sm">
+                        <input type="checkbox" checked={Boolean(form[key as keyof typeof form])}
+                          onChange={(event) => update(key as "isMegaDeal", event.target.checked)} className="accent-accent" />
+                        {text}
+                      </label>
+                    ))}
                   </div>
                 </div>
               </section>

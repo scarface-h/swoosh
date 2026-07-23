@@ -8,7 +8,12 @@ export async function validateCouponForOrder(
   rawCode: string,
   subtotal: number,
   userId?: string,
-  lines?: Array<{ productId: string; categoryId: string; lineTotal: number }>,
+  lines?: Array<{
+    productId: string;
+    categoryId: string;
+    lineTotal: number;
+    couponEligible: boolean;
+  }>,
   guestKey?: string,
 ) {
   const coupon = await prisma.coupon.findUnique({
@@ -53,11 +58,18 @@ export async function validateCouponForOrder(
     value: coupon.value.toString(),
     maxDiscount: coupon.maximumDiscount?.toString() ?? null,
   };
-  if (lines && (coupon.products.length || coupon.categories.length)) {
+  if (lines) {
     const productIds = new Set(coupon.products.map((rule) => rule.productId));
     const categoryIds = new Set(coupon.categories.map((rule) => rule.categoryId));
+    const hasRules = productIds.size > 0 || categoryIds.size > 0;
     calc.eligibleSubtotal = lines
-      .filter((line) => productIds.has(line.productId) || categoryIds.has(line.categoryId))
+      .filter(
+        (line) =>
+          line.couponEligible &&
+          (!hasRules ||
+            productIds.has(line.productId) ||
+            categoryIds.has(line.categoryId)),
+      )
       .reduce((sum, line) => sum + line.lineTotal, 0);
     if (calc.eligibleSubtotal <= 0) throw new AppError(400, 'INVALID_COUPON', 'No cart items are eligible for this coupon');
   }

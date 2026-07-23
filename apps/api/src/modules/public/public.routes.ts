@@ -19,6 +19,38 @@ import { env } from "../../config/env.js";
 export const publicRouter = Router();
 
 publicRouter.get(
+  "/store-config",
+  asyncHandler(async (_req, res) => {
+    const settings = await prisma.siteSetting.findMany({
+      where: {
+        isPublic: true,
+        key: {
+          in: [
+            "store.name",
+            "delivery.dhaka_inside",
+            "delivery.outside_dhaka",
+            "policy.delivery_exchange",
+          ],
+        },
+      },
+      select: { key: true, value: true },
+    });
+    const values = Object.fromEntries(settings.map((setting) => [setting.key, setting.value]));
+    sendSuccess(res, {
+      storeName: values["store.name"] ?? "Swoosh Shop",
+      delivery: {
+        DHAKA_INSIDE: values["delivery.dhaka_inside"] ?? { charge: 100, active: true },
+        OUTSIDE_DHAKA: values["delivery.outside_dhaka"] ?? { charge: 150, active: true },
+      },
+      policy: values["policy.delivery_exchange"] ?? {
+        deliveryText: "Delivery across Bangladesh in 2–5 business days.",
+        exchangeText: "Exchange requests are accepted according to the store policy.",
+      },
+    });
+  }),
+);
+
+publicRouter.get(
   "/categories",
   asyncHandler(async (_req, res) => {
     const [categories, productCounts] = await Promise.all([

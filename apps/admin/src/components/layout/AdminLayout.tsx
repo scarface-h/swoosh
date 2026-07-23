@@ -21,6 +21,7 @@ import {
   ShieldCheck,
   Users,
   X,
+  TicketPercent,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -49,6 +50,7 @@ const baseNavigationGroups: Array<{
       { label: "Catalog", href: "/catalog", icon: FolderTree },
       { label: "Orders", href: "/orders", icon: ShoppingCart },
       { label: "Customers", href: "/customers", icon: Users },
+      { label: "Promotions", href: "/promotions", icon: TicketPercent, permission: "coupons.manage" },
       {
         label: "Reviews",
         href: "/reviews",
@@ -96,6 +98,10 @@ const pageDetails: Record<string, { title: string; description: string }> = {
   "/reviews": {
     title: "Reviews",
     description: "Moderate verified customer product feedback",
+  },
+  "/promotions": {
+    title: "Promotions",
+    description: "Generate coupons and manage site-wide discounts",
   },
   "/users": {
     title: "Admin users",

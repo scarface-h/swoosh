@@ -131,6 +131,12 @@ const knownSettingSchemas: Record<string, z.ZodTypeAny> = {
       freeAbove: z.number().nonnegative().optional(),
     })
     .strict(),
+  "policy.delivery_exchange": z
+    .object({
+      deliveryText: z.string().max(10_000),
+      exchangeText: z.string().max(10_000),
+    })
+    .strict(),
   "payment.cod": z.object({ active: z.boolean() }).strict(),
   maintenance: z
     .object({ active: z.boolean(), message: z.string().max(500).optional() })
@@ -206,6 +212,26 @@ const productBody = z
     status: z.enum(["DRAFT", "ACTIVE", "ARCHIVED"]).default("DRAFT"),
     isFeatured: z.boolean().default(false),
     isNewArrival: z.boolean().default(false),
+    isMegaDeal: z.boolean().default(false),
+    isTopSelling: z.boolean().default(false),
+    hasFreeDelivery: z.boolean().default(false),
+    isMerchandise: z.boolean().default(false),
+    isGiftable: z.boolean().default(false),
+    couponEligible: z.boolean().default(true),
+    conditionLabel: z.string().max(80).optional().nullable(),
+    detailsAndCare: z.string().max(20_000).optional().nullable(),
+    showDetailsCare: z.boolean().default(false),
+    sizeChart: z
+      .array(z.record(z.string().max(120)))
+      .max(50)
+      .optional()
+      .nullable(),
+    showSizeChart: z.boolean().default(false),
+    warrantyInfo: z.string().max(20_000).optional().nullable(),
+    showWarranty: z.boolean().default(false),
+    deliveryInfo: z.string().max(20_000).optional().nullable(),
+    exchangePolicy: z.string().max(20_000).optional().nullable(),
+    giftDescription: z.string().max(500).optional().nullable(),
     tags: z.array(z.string().max(50)).max(30).default([]),
     seoTitle: z.string().max(160).optional().nullable(),
     seoDescription: z.string().max(320).optional().nullable(),
@@ -1643,7 +1669,14 @@ router.get(
   asyncHandler(async (_req, res) =>
     sendSuccess(
       res,
-      await prisma.coupon.findMany({ orderBy: { createdAt: "desc" } }),
+      await prisma.coupon.findMany({
+        include: {
+          products: { include: { product: { select: { id: true, name: true } } } },
+          categories: { include: { category: { select: { id: true, name: true } } } },
+          _count: { select: { usages: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      }),
     ),
   ),
 );
@@ -1664,6 +1697,8 @@ const couponBody = z
     expiresAt: z.coerce.date(),
     firstOrderOnly: z.boolean().default(false),
     isActive: z.boolean().default(true),
+    productIds: z.array(z.string().min(1)).max(500).default([]),
+    categoryIds: z.array(z.string().min(1)).max(500).default([]),
   })
   .strict();
 router.post(
@@ -1671,14 +1706,18 @@ router.post(
   requirePermission(PERMISSIONS.COUPONS_MANAGE),
   validate({ body: couponBody }),
   asyncHandler(async (req, res) => {
+    const { productIds, categoryIds, ...input } = req.body;
     const coupon = await prisma.coupon.create({
       data: {
-        ...req.body,
+        ...input,
         value: req.body.value.toString(),
         minimumSpend: req.body.minimumSpend?.toString(),
         maximumDiscount: req.body.maximumDiscount?.toString(),
         createdByAdminId: req.auth!.sub,
+        products: { create: productIds.map((productId: string) => ({ productId })) },
+        categories: { create: categoryIds.map((categoryId: string) => ({ categoryId })) },
       },
+      include: { products: true, categories: true },
     });
     await audit(req, res, "coupon.create", "Coupon", coupon.id);
     sendSuccess(res, coupon, 201);
@@ -1689,9 +1728,32 @@ router.patch(
   requirePermission(PERMISSIONS.COUPONS_MANAGE),
   validate({ body: couponBody.partial() }),
   asyncHandler(async (req, res) => {
-    const coupon = await prisma.coupon.update({
-      where: { id: String(Object.values(req.params)[0]) },
-      data: req.body,
+    const id = String(Object.values(req.params)[0]);
+    const { productIds, categoryIds, ...input } = req.body;
+    const data = {
+      ...input,
+      ...(input.value !== undefined ? { value: input.value.toString() } : {}),
+      ...(input.minimumSpend !== undefined
+        ? { minimumSpend: input.minimumSpend?.toString() ?? null }
+        : {}),
+      ...(input.maximumDiscount !== undefined
+        ? { maximumDiscount: input.maximumDiscount?.toString() ?? null }
+        : {}),
+    };
+    const coupon = await prisma.$transaction(async (tx) => {
+      if (productIds) {
+        await tx.couponProduct.deleteMany({ where: { couponId: id } });
+        if (productIds.length) await tx.couponProduct.createMany({
+          data: productIds.map((productId: string) => ({ couponId: id, productId })),
+        });
+      }
+      if (categoryIds) {
+        await tx.couponCategory.deleteMany({ where: { couponId: id } });
+        if (categoryIds.length) await tx.couponCategory.createMany({
+          data: categoryIds.map((categoryId: string) => ({ couponId: id, categoryId })),
+        });
+      }
+      return tx.coupon.update({ where: { id }, data });
     });
     await audit(req, res, "coupon.update", "Coupon", coupon.id);
     sendSuccess(res, coupon);

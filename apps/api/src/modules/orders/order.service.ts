@@ -64,7 +64,8 @@ export async function priceOrder(req: {
     variantId: string; productId: string; categoryId: string; quantity: number; productName: string;
     productSlug: string; productSku: string | null; variantSku: string;
     options: Array<{ option: string; value: string }>; imageUrl: string | null;
-    regularPrice: number; effectivePrice: number;
+    regularPrice: number; effectivePrice: number; couponEligible: boolean;
+    hasFreeDelivery: boolean;
   }> = [];
   for (const item of normalized) {
     const variant = byId.get(item.variantId);
@@ -113,6 +114,8 @@ export async function priceOrder(req: {
       imageUrl: variant.product.images[0]?.url ?? null,
       regularPrice: price.regularPrice,
       effectivePrice: price.effectivePrice,
+      couponEligible: variant.product.couponEligible,
+      hasFreeDelivery: variant.product.hasFreeDelivery,
     });
     if (variant.stock - item.quantity <= variant.lowStockThreshold) {
       warnings.push({ code: 'LOW_STOCK', message: `Low stock for ${variant.sku}`, variantId: variant.id });
@@ -121,13 +124,16 @@ export async function priceOrder(req: {
       warnings.push({ code: 'PRICE_CHANGED', message: `Price changed for ${variant.sku}`, variantId: variant.id });
     }
   }
-  const deliveryCharge = await getDeliveryCharge(req.deliveryZone);
   const subtotal = lines.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0);
+  const deliveryCharge = stockPlan.every((line) => line.hasFreeDelivery)
+    ? 0
+    : await getDeliveryCharge(req.deliveryZone, subtotal);
   const coupon = req.couponCode
     ? await validateCouponForOrder(req.couponCode, subtotal, req.userId, stockPlan.map((line) => ({
         productId: line.productId,
         categoryId: line.categoryId,
         lineTotal: line.effectivePrice * line.quantity,
+        couponEligible: line.couponEligible,
       })), req.guestKey)
     : null;
   return { breakdown: buildPricing({ lines, deliveryCharge, coupon: coupon?.calc }), warnings, stockPlan, coupon };

@@ -300,6 +300,22 @@ model Product {
   status           ProductStatus       @default(DRAFT)
   isFeatured       Boolean             @default(false)
   isNewArrival     Boolean             @default(false)
+  isMegaDeal       Boolean             @default(false)
+  isTopSelling     Boolean             @default(false)
+  hasFreeDelivery  Boolean             @default(false)
+  isMerchandise    Boolean             @default(false)
+  isGiftable       Boolean             @default(false)
+  couponEligible   Boolean             @default(true)
+  conditionLabel   String?             @db.VarChar(80)
+  detailsAndCare   String?             @db.Text
+  showDetailsCare  Boolean             @default(false)
+  sizeChart        Json?
+  showSizeChart    Boolean             @default(false)
+  warrantyInfo     String?             @db.Text
+  showWarranty     Boolean             @default(false)
+  deliveryInfo     String?             @db.Text
+  exchangePolicy   String?             @db.Text
+  giftDescription  String?             @db.VarChar(500)
   viewCount        Int                 @default(0)
   soldCount        Int                 @default(0)
   tags             Json
@@ -324,6 +340,9 @@ model Product {
   @@index([categoryId, status])
   @@index([isFeatured, status])
   @@index([isNewArrival, status])
+  @@index([isMegaDeal, status])
+  @@index([isTopSelling, status])
+  @@index([hasFreeDelivery, status])
   @@index([soldCount, status])
   @@map("products")
 }

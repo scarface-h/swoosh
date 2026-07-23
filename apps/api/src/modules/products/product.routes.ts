@@ -19,6 +19,15 @@ const listQuery = z.object({
   inStock: z.coerce.boolean().optional(),
   featured: z.coerce.boolean().optional(),
   newArrival: z.coerce.boolean().optional(),
+  offer: z
+    .enum([
+      'mega-deal',
+      'new-arrival',
+      'top-selling',
+      'free-delivery',
+      'merchandise',
+    ])
+    .optional(),
   search: z.string().optional(),
   ids: z
     .string()
