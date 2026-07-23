@@ -95,6 +95,7 @@ paths:
   /admin/products/{id}: { parameters: [{ in: path, name: id, required: true, schema: { type: string } }], get: { summary: Product editor detail, responses: { '200': { description: OK } } }, patch: { summary: Update product, responses: { '200': { description: OK } } } }
   /admin/products/{id}/archive: { parameters: [{ in: path, name: id, required: true, schema: { type: string } }], post: { summary: Archive product, responses: { '200': { description: OK } } } }
   /admin/products/{id}/restore: { parameters: [{ in: path, name: id, required: true, schema: { type: string } }], post: { summary: Restore to draft, responses: { '200': { description: OK } } } }
+  /admin/products/{id}/publish: { parameters: [{ in: path, name: id, required: true, schema: { type: string } }], post: { summary: Publish a draft or archived product to the storefront, responses: { '200': { description: Published } } } }
   /admin/products/{id}/duplicate: { parameters: [{ in: path, name: id, required: true, schema: { type: string } }], post: { summary: Duplicate product, responses: { '201': { description: Created } } } }
   /admin/products/{id}/variants: { parameters: [{ in: path, name: id, required: true, schema: { type: string } }], post: { summary: Create zero-stock variant, responses: { '201': { description: Created } } } }
   /admin/products/{id}/options: { parameters: [{ in: path, name: id, required: true, schema: { type: string } }], post: { summary: Create product option and values, responses: { '201': { description: Created } } } }

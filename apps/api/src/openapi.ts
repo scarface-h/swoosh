@@ -156,6 +156,12 @@ export const openapiDocument = {
         responses: { "201": { description: "Complete product created" } },
       },
     },
+    "/admin/products/{id}/publish": {
+      post: {
+        summary: "Publish a draft or archived product to the storefront",
+        responses: { "200": { description: "Published product" } },
+      },
+    },
     "/admin/inventory/adjust": {
       post: {
         summary: "Atomically adjust inventory and record movement",

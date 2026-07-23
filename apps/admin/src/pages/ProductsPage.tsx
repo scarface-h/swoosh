@@ -61,18 +61,18 @@ export default function ProductsPage() {
     void load();
   }, [load]);
 
-  const toggleArchive = async (product: Product) => {
+  const updatePublishing = async (product: Product) => {
     setUpdating(product.id);
     setError("");
     try {
-      const action = product.status === "ARCHIVED" ? "restore" : "archive";
+      const action = product.status === "ACTIVE" ? "archive" : "publish";
       await adminApiFetch(`/admin/products/${product.id}/${action}`, {
         method: "POST",
       });
       setNotice(
-        product.status === "ARCHIVED"
-          ? "Product restored as a draft."
-          : "Product archived.",
+        product.status === "ACTIVE"
+          ? "Product archived and hidden from the shop."
+          : "Product published and visible in the shop.",
       );
       await load();
     } catch (caught) {
@@ -194,10 +194,10 @@ export default function ProductsPage() {
                 <button
                   type="button"
                   disabled={updating === product.id}
-                  onClick={() => void toggleArchive(product)}
+                  onClick={() => void updatePublishing(product)}
                   className="min-h-10 rounded-lg border border-line px-3 text-sm disabled:opacity-50"
                 >
-                  {product.status === "ARCHIVED" ? "Restore" : "Archive"}
+                  {product.status === "ACTIVE" ? "Archive" : "Publish"}
                 </button>
               </article>
             ))}

@@ -217,7 +217,7 @@ export default function ProductCreateModal({
     salePrice: "",
     saleStartsAt: "",
     saleEndsAt: "",
-    status: "DRAFT" as "DRAFT" | "ACTIVE",
+    status: "ACTIVE" as "DRAFT" | "ACTIVE",
     tags: "",
     collectionIds: [] as string[],
     isFeatured: false,

@@ -464,6 +464,14 @@ router.post('/products/:id/restore', requirePermission(PERMISSIONS.PRODUCTS_UPDA
   await audit(req, res, 'product.restore', 'Product', product.id);
   sendSuccess(res, product);
 }));
+router.post('/products/:id/publish', requirePermission(PERMISSIONS.PRODUCTS_UPDATE), asyncHandler(async (req, res) => {
+  const product = await prisma.product.update({
+    where: { id: String(Object.values(req.params)[0]) },
+    data: { status: 'ACTIVE', archivedAt: null, updatedByAdminId: req.auth!.sub },
+  });
+  await audit(req, res, 'product.publish', 'Product', product.id, undefined, { status: 'ACTIVE' });
+  sendSuccess(res, product);
+}));
 router.post('/products/:id/duplicate', requirePermission(PERMISSIONS.PRODUCTS_CREATE), asyncHandler(async (req, res) => {
   const source: any = await prisma.product.findUnique({ where: { id: String(Object.values(req.params)[0]) }, include: { images: true, collections: true } });
   if (!source) throw AppError.notFound('Product not found');
