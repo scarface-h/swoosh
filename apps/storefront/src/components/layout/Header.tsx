@@ -85,6 +85,9 @@ const fallbackCollections: PublicCollection[] = [
 export default function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [desktopMenu, setDesktopMenu] = useState<
+    "categories" | "collections" | null
+  >(null);
   const [categories, setCategories] =
     useState<PublicCategory[]>(fallbackCategories);
   const [collections, setCollections] =
@@ -148,7 +151,17 @@ export default function Header() {
 
   useEffect(() => {
     setMenuOpen(false);
+    setDesktopMenu(null);
   }, [pathname]);
+
+  useEffect(() => {
+    if (!desktopMenu) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setDesktopMenu(null);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [desktopMenu]);
 
   useEffect(() => {
     document.body.style.overflow = menuOpen ? "hidden" : "";
@@ -213,109 +226,63 @@ export default function Header() {
               New Arrivals
             </Link>
             {primaryCategories.map((category) => (
-              <div key={category.id} className="group relative">
-                <Link
-                  to={`/shop?category=${category.slug}`}
-                  className={cn(
-                    "flex min-h-11 items-center gap-1 text-[12px] font-medium uppercase tracking-[0.13em] transition-opacity hover:opacity-65",
-                    iconColor,
-                  )}
-                >
-                  {category.name}
-                  {Boolean(category.children?.length) && <ChevronDown size={13} />}
-                </Link>
-                {Boolean(category.children?.length) && (
-                  <div className="invisible absolute left-1/2 top-full w-64 -translate-x-1/2 pt-2 opacity-0 transition group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
-                    <div className="border border-line bg-surface p-3 shadow-xl">
-                      <Link
-                        to={`/shop?category=${category.slug}`}
-                        className="flex min-h-10 items-center border-b border-line px-2 text-sm font-medium text-ink"
-                      >
-                        Shop all {category.name}
-                      </Link>
-                      {category.children?.map((child) => (
-                        <Link
-                          key={child.id}
-                          to={`/shop?category=${child.slug}`}
-                          className="flex min-h-10 items-center justify-between px-2 text-sm text-muted hover:bg-background hover:text-ink"
-                        >
-                          {child.name}
-                          <span className="text-xs">{child._count?.products ?? 0}</span>
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-            <div className="group relative">
               <Link
-                to="/categories"
+                key={category.id}
+                to={`/shop?category=${category.slug}`}
                 className={cn(
-                  "flex min-h-11 items-center gap-1 text-[12px] font-medium uppercase tracking-[0.13em]",
+                  "flex min-h-11 items-center text-[12px] font-medium uppercase tracking-[0.13em] transition-opacity hover:opacity-65",
                   iconColor,
                 )}
               >
-                Categories <ChevronDown size={13} />
+                {category.name}
               </Link>
-              <div className="invisible absolute left-1/2 top-full w-[34rem] -translate-x-1/2 pt-2 opacity-0 transition group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
-                <div className="grid grid-cols-3 gap-x-5 gap-y-2 border border-line bg-surface p-5 shadow-xl">
-                  {categories.map((category) => (
-                    <div key={category.id}>
-                      <Link
-                        to={`/shop?category=${category.slug}`}
-                        className="flex min-h-9 items-center text-sm font-medium text-ink hover:text-accent"
-                      >
-                        {category.name}
-                      </Link>
-                      {category.children?.slice(0, 4).map((child) => (
-                        <Link
-                          key={child.id}
-                          to={`/shop?category=${child.slug}`}
-                          className="block py-1 text-xs text-muted hover:text-ink"
-                        >
-                          {child.name}
-                        </Link>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className="group relative">
-              <button
-                type="button"
+            ))}
+            <button
+              type="button"
+              aria-expanded={desktopMenu === "categories"}
+              aria-controls="desktop-categories-menu"
+              onClick={() =>
+                setDesktopMenu((current) =>
+                  current === "categories" ? null : "categories",
+                )
+              }
+              className={cn(
+                "flex min-h-11 items-center gap-1 text-[12px] font-medium uppercase tracking-[0.13em]",
+                iconColor,
+              )}
+            >
+              Categories
+              <ChevronDown
                 className={cn(
-                  "flex min-h-11 items-center gap-1 text-[12px] font-medium uppercase tracking-[0.13em]",
-                  iconColor,
+                  "transition-transform",
+                  desktopMenu === "categories" && "rotate-180",
                 )}
-              >
-                Collections <ChevronDown size={13} />
-              </button>
-              <div className="invisible absolute right-0 top-full w-64 pt-2 opacity-0 transition group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
-                <div className="border border-line bg-surface p-3 shadow-xl">
-                  {collections.length ? (
-                    collections.map((collection) => (
-                      <Link
-                        key={collection.id}
-                        to={`/collection/${collection.slug}`}
-                        className="flex min-h-11 items-center justify-between px-2 text-sm text-ink hover:bg-background"
-                      >
-                        {collection.name}
-                        <ArrowUpRight size={14} className="text-muted" />
-                      </Link>
-                    ))
-                  ) : (
-                    <Link
-                      to="/shop"
-                      className="flex min-h-11 items-center px-2 text-sm text-ink"
-                    >
-                      Browse all products
-                    </Link>
-                  )}
-                </div>
-              </div>
-            </div>
+                size={13}
+              />
+            </button>
+            <button
+              type="button"
+              aria-expanded={desktopMenu === "collections"}
+              aria-controls="desktop-collections-menu"
+              onClick={() =>
+                setDesktopMenu((current) =>
+                  current === "collections" ? null : "collections",
+                )
+              }
+              className={cn(
+                "flex min-h-11 items-center gap-1 text-[12px] font-medium uppercase tracking-[0.13em]",
+                iconColor,
+              )}
+            >
+              Collections
+              <ChevronDown
+                className={cn(
+                  "transition-transform",
+                  desktopMenu === "collections" && "rotate-180",
+                )}
+                size={13}
+              />
+            </button>
           </nav>
 
           <div className="flex items-center gap-0.5 sm:gap-1">
@@ -354,6 +321,109 @@ export default function Header() {
           </div>
         </div>
       </header>
+
+      <AnimatePresence>
+        {desktopMenu && (
+          <>
+            <motion.button
+              type="button"
+              aria-label="Close shop menu"
+              className="fixed inset-0 z-[55] hidden bg-black/20 lg:block"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setDesktopMenu(null)}
+            />
+            <motion.section
+              id={
+                desktopMenu === "categories"
+                  ? "desktop-categories-menu"
+                  : "desktop-collections-menu"
+              }
+              className="fixed left-1/2 top-[72px] z-[60] hidden max-h-[calc(100vh-5.5rem)] w-[min(94vw,70rem)] -translate-x-1/2 overflow-y-auto border border-[#DDD8D0] bg-white text-[#1A1A1A] shadow-2xl lg:block"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.18 }}
+            >
+              {desktopMenu === "categories" ? (
+                <>
+                  <div className="flex items-center justify-between border-b border-[#DDD8D0] px-6 py-4">
+                    <div>
+                      <p className="font-serif text-2xl text-[#1A1A1A]">
+                        Shop categories
+                      </p>
+                      <p className="mt-1 text-xs text-[#6B6560]">
+                        Browse departments and product types
+                      </p>
+                    </div>
+                    <Link
+                      to="/categories"
+                      className="flex min-h-10 items-center gap-2 text-sm font-medium text-[#1A1A1A] underline underline-offset-4"
+                    >
+                      View all <ArrowUpRight size={15} />
+                    </Link>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-8 gap-y-6 p-6 md:grid-cols-3 xl:grid-cols-4">
+                    {categories.map((category) => (
+                      <div key={category.id} className="min-w-0">
+                        <Link
+                          to={`/shop?category=${category.slug}`}
+                          className="flex min-h-10 items-center justify-between border-b border-[#DDD8D0] font-medium text-[#1A1A1A] hover:text-[#C44A2D]"
+                        >
+                          {category.name}
+                          <span className="text-xs font-normal text-[#6B6560]">
+                            {category._count?.products ?? 0}
+                          </span>
+                        </Link>
+                        <div className="pt-2">
+                          {category.children?.map((child) => (
+                            <Link
+                              key={child.id}
+                              to={`/shop?category=${child.slug}`}
+                              className="flex min-h-8 items-center justify-between text-sm text-[#6B6560] hover:text-[#1A1A1A]"
+                            >
+                              {child.name}
+                              {(child._count?.products ?? 0) > 0 && (
+                                <span className="text-xs">
+                                  {child._count?.products}
+                                </span>
+                              )}
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="border-b border-[#DDD8D0] px-6 py-4">
+                    <p className="font-serif text-2xl text-[#1A1A1A]">
+                      Collections
+                    </p>
+                    <p className="mt-1 text-xs text-[#6B6560]">
+                      Curated edits from Swoosh
+                    </p>
+                  </div>
+                  <div className="grid gap-3 p-6 sm:grid-cols-2 lg:grid-cols-3">
+                    {collections.map((collection) => (
+                      <Link
+                        key={collection.id}
+                        to={`/collection/${collection.slug}`}
+                        className="flex min-h-16 items-center justify-between border border-[#DDD8D0] bg-[#FAF8F4] px-4 text-sm font-medium text-[#1A1A1A] hover:border-[#1A1A1A]"
+                      >
+                        {collection.name}
+                        <ArrowUpRight size={16} />
+                      </Link>
+                    ))}
+                  </div>
+                </>
+              )}
+            </motion.section>
+          </>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {menuOpen && (
