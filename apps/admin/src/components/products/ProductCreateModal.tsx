@@ -305,15 +305,30 @@ export default function ProductCreateModal({
     });
   };
 
-  const addOption = () =>
+  const addPresetOption = (name = "", values = [""]) => {
+    if (
+      name &&
+      options.some(
+        (option) => option.name.trim().toLowerCase() === name.toLowerCase(),
+      )
+    ) {
+      setError(`${name} option has already been added.`);
+      return;
+    }
+    setError("");
     setOptions((current) => [
       ...current,
       {
         id: newId(),
-        name: "",
-        values: [{ id: newId(), value: "", hex: "#1a1a1a" }],
+        name,
+        values: values.map((value) => ({
+          id: newId(),
+          value,
+          hex: "#1a1a1a",
+        })),
       },
     ]);
+  };
 
   const updateOption = (
     optionId: string,
@@ -1276,14 +1291,43 @@ export default function ProductCreateModal({
                       attribute.
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={addOption}
-                    disabled={options.length >= 8}
-                    className="flex min-h-11 items-center gap-2 rounded-xl border border-line px-4 text-sm font-medium disabled:opacity-50"
-                  >
-                    <Plus size={16} /> Add option
-                  </button>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        addPresetOption("Size", [
+                          "XS",
+                          "S",
+                          "M",
+                          "L",
+                          "XL",
+                          "XXL",
+                        ])
+                      }
+                      disabled={options.length >= 8}
+                      className="flex min-h-11 items-center gap-2 rounded-xl bg-accent px-4 text-sm font-semibold text-white disabled:opacity-50"
+                    >
+                      <Plus size={16} /> Add size option
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        addPresetOption("Colour", ["Black", "White"])
+                      }
+                      disabled={options.length >= 8}
+                      className="flex min-h-11 items-center gap-2 rounded-xl border border-line px-4 text-sm font-medium disabled:opacity-50"
+                    >
+                      <Plus size={16} /> Add colour
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => addPresetOption()}
+                      disabled={options.length >= 8}
+                      className="flex min-h-11 items-center gap-2 rounded-xl border border-line px-4 text-sm font-medium disabled:opacity-50"
+                    >
+                      <Plus size={16} /> Custom option
+                    </button>
+                  </div>
                 </div>
 
                 <div className="mt-6 space-y-4">
