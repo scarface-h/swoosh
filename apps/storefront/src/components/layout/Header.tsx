@@ -11,15 +11,21 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { apiFetch } from "@/lib/api";
-import {
-  type PublicCategory,
-  type PublicCollection,
-} from "@/lib/catalog";
+import { type PublicCategory, type PublicCollection } from "@/lib/catalog";
 import { cn } from "@/lib/utils";
 import { useCartStore } from "@/stores/cartStore";
 import { useWishlistStore } from "@/stores/wishlistStore";
 
 const preferredDepartments = ["men", "women", "accessories"];
+const categoryHref = (category: PublicCategory, parent?: PublicCategory) => {
+  const department = parent ?? category;
+  if (preferredDepartments.includes(department.slug)) {
+    const query = new URLSearchParams({ department: department.slug });
+    if (parent) query.set("category", category.slug);
+    return `/shop?${query.toString()}`;
+  }
+  return `/shop?category=${category.slug}`;
+};
 const fallbackCategories: PublicCategory[] = [
   {
     id: "fallback-men",
@@ -98,7 +104,9 @@ export default function Header() {
   const openCart = useCartStore((state) => state.openCart);
 
   const overlaysHero =
-    pathname === "/" || pathname === "/about" || pathname.startsWith("/collection/");
+    pathname === "/" ||
+    pathname === "/about" ||
+    pathname.startsWith("/collection/");
   const solid = scrolled || !overlaysHero || menuOpen;
   const iconColor = solid ? "text-ink" : "text-white";
 
@@ -120,7 +128,10 @@ export default function Header() {
         .catch(() => {
           if (!cancelled && attempt < 2) {
             retryTimers.push(
-              window.setTimeout(() => loadCategories(attempt + 1), 1500 * (attempt + 1)),
+              window.setTimeout(
+                () => loadCategories(attempt + 1),
+                1500 * (attempt + 1),
+              ),
             );
           }
         });
@@ -215,7 +226,10 @@ export default function Header() {
             SWOOSH
           </Link>
 
-          <nav className="hidden items-center gap-6 lg:flex" aria-label="Main navigation">
+          <nav
+            className="hidden items-center gap-6 lg:flex"
+            aria-label="Main navigation"
+          >
             <Link
               to="/shop?filter=new"
               className={cn(
@@ -228,7 +242,7 @@ export default function Header() {
             {primaryCategories.map((category) => (
               <Link
                 key={category.id}
-                to={`/shop?category=${category.slug}`}
+                to={categoryHref(category)}
                 className={cn(
                   "flex min-h-11 items-center text-[12px] font-medium uppercase tracking-[0.13em] transition-opacity hover:opacity-65",
                   iconColor,
@@ -368,7 +382,7 @@ export default function Header() {
                     {categories.map((category) => (
                       <div key={category.id} className="min-w-0">
                         <Link
-                          to={`/shop?category=${category.slug}`}
+                          to={categoryHref(category)}
                           className="flex min-h-10 items-center justify-between border-b border-[#DDD8D0] font-medium text-[#1A1A1A] hover:text-[#C44A2D]"
                         >
                           {category.name}
@@ -380,7 +394,7 @@ export default function Header() {
                           {category.children?.map((child) => (
                             <Link
                               key={child.id}
-                              to={`/shop?category=${child.slug}`}
+                              to={categoryHref(child, category)}
                               className="flex min-h-8 items-center justify-between text-sm text-[#6B6560] hover:text-[#1A1A1A]"
                             >
                               {child.name}
@@ -469,7 +483,7 @@ export default function Header() {
                 {categories.map((category) => (
                   <div key={category.id} className="border-b border-line py-2">
                     <Link
-                      to={`/shop?category=${category.slug}`}
+                      to={categoryHref(category)}
                       onClick={() => setMenuOpen(false)}
                       className="flex min-h-10 items-center justify-between font-serif text-xl text-ink"
                     >
@@ -483,7 +497,7 @@ export default function Header() {
                         {category.children.map((child) => (
                           <Link
                             key={child.id}
-                            to={`/shop?category=${child.slug}`}
+                            to={categoryHref(child, category)}
                             onClick={() => setMenuOpen(false)}
                             className="py-1 text-sm text-muted"
                           >

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import {
+  Edit3,
   Loader2,
   PackagePlus,
   Plus,
@@ -7,6 +8,7 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
+import ProductEditModal from "@/components/products/ProductEditModal";
 import ProductCreateModal, {
   type Category,
   type Collection,
@@ -42,6 +44,7 @@ export default function ProductsPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
+  const [editProductId, setEditProductId] = useState("");
   const [updating, setUpdating] = useState("");
   const [placementProduct, setPlacementProduct] = useState<Product | null>(
     null,
@@ -276,6 +279,16 @@ export default function ProductsPage() {
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
+                    onClick={() => {
+                      setNotice("");
+                      setEditProductId(product.id);
+                    }}
+                    className="flex min-h-10 items-center gap-1.5 rounded-lg bg-ink px-3 text-sm text-white"
+                  >
+                    <Edit3 size={15} /> Edit
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => openPlacement(product)}
                     className="flex min-h-10 items-center gap-1.5 rounded-lg border border-accent px-3 text-sm text-accent"
                   >
@@ -303,6 +316,19 @@ export default function ProductsPage() {
           onClose={() => setCreateOpen(false)}
           onCreated={(message) => {
             setCreateOpen(false);
+            setNotice(message);
+            void load();
+          }}
+        />
+      )}
+
+      {editProductId && (
+        <ProductEditModal
+          productId={editProductId}
+          categories={categories}
+          collections={collections}
+          onClose={() => setEditProductId("")}
+          onSaved={(message) => {
             setNotice(message);
             void load();
           }}

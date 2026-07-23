@@ -165,10 +165,14 @@ export default function ShopPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [search, setSearch] = useState(searchParams.get("search") ?? "");
 
+  const departmentSlug = searchParams.get("department") ?? "";
   const category = searchParams.get("category") ?? "";
   const size = searchParams.get("size") ?? "";
   const inStock = searchParams.get("inStock") === "true";
   const sort = searchParams.get("sort") ?? "newest";
+  const department = categories.find((item) => item.slug === departmentSlug);
+  const visibleCategories = department?.children ?? categories;
+  const catalogueCategory = category || departmentSlug;
 
   useEffect(() => {
     apiFetch<PublicCategory[]>("/categories")
@@ -183,7 +187,7 @@ export default function ShopPage() {
         pageSize: "12",
         sort,
       });
-      if (category) query.set("category", category);
+      if (catalogueCategory) query.set("category", catalogueCategory);
       if (size) query.set("size", size);
       if (inStock) query.set("inStock", "true");
       const requestedSearch = searchParams.get("search");
@@ -191,7 +195,7 @@ export default function ShopPage() {
       if (searchParams.get("filter") === "new") query.set("newArrival", "true");
       return query.toString();
     },
-    [category, inStock, searchParams, size, sort],
+    [catalogueCategory, inStock, searchParams, size, sort],
   );
 
   const load = useCallback(
@@ -242,7 +246,7 @@ export default function ShopPage() {
 
   const clearFilters = () => {
     setSearch("");
-    setSearchParams({});
+    setSearchParams(departmentSlug ? { department: departmentSlug } : {});
   };
 
   const filters = (
@@ -257,9 +261,9 @@ export default function ShopPage() {
               !category ? "font-medium text-ink" : "text-muted",
             )}
           >
-            All products
+            {department ? `All ${department.name}` : "All products"}
           </button>
-          {flattenCategories(categories).map((item) => (
+          {flattenCategories(visibleCategories).map((item) => (
             <button
               type="button"
               key={item.id}
@@ -325,10 +329,12 @@ export default function ShopPage() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-serif text-3xl text-ink sm:text-4xl md:text-5xl">
-            Shop
+            {department?.name ?? "Shop"}
           </h1>
           <p className="mt-2 text-sm text-muted">
-            {loading ? "Loading catalogue…" : `${total} products`}
+            {loading
+              ? "Loading catalogue…"
+              : `${total} ${department ? `${department.name.toLowerCase()} ` : ""}products`}
           </p>
         </div>
         <form
