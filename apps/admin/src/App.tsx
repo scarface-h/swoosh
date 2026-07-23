@@ -10,6 +10,9 @@ import CatalogPage from "./pages/CatalogPage";
 import LoginPage from "./pages/LoginPage";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import { useUiStore } from "./stores/uiStore";
+import AdminUsersPage from "./pages/AdminUsersPage";
+import ReviewsPage from "./pages/ReviewsPage";
+import HelpDeskPage from "./pages/HelpDeskPage";
 
 export default function App() {
   const theme = useUiStore((state) => state.theme);
@@ -35,7 +38,10 @@ export default function App() {
           <Route path="/catalog" element={<CatalogPage />} />
           <Route path="/orders" element={<OrdersPage />} />
           <Route path="/customers" element={<CustomersPage />} />
+          <Route path="/reviews" element={<ReviewsPage />} />
+          <Route path="/users" element={<AdminUsersPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/help-desk" element={<HelpDeskPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

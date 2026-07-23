@@ -16,6 +16,23 @@ const STATUSES = [
   "REFUNDED",
 ] as const;
 
+const NEXT_STATUSES: Record<
+  (typeof STATUSES)[number],
+  (typeof STATUSES)[number][]
+> = {
+  PENDING: ["CONFIRMED", "CANCELLED"],
+  CONFIRMED: ["PROCESSING", "CANCELLED"],
+  PROCESSING: ["PACKED", "CANCELLED"],
+  PACKED: ["SHIPPED", "CANCELLED"],
+  SHIPPED: ["OUT_FOR_DELIVERY", "RETURN_REQUESTED"],
+  OUT_FOR_DELIVERY: ["DELIVERED", "RETURN_REQUESTED"],
+  DELIVERED: ["RETURN_REQUESTED"],
+  CANCELLED: [],
+  RETURN_REQUESTED: ["RETURNED", "DELIVERED"],
+  RETURNED: ["REFUNDED"],
+  REFUNDED: [],
+};
+
 interface Order {
   id: string;
   orderNumber: string;
@@ -72,7 +89,9 @@ export default function OrdersPage() {
     } catch (caught) {
       setError(
         caught instanceof ApiError
-          ? caught.message
+          ? caught.code === "INTERNAL_ERROR"
+            ? "The order could not be updated safely. Refresh the list and try the next valid status."
+            : caught.message
           : "Unable to update the order.",
       );
     } finally {
@@ -146,7 +165,10 @@ export default function OrdersPage() {
                 </div>
                 <select
                   value={order.status}
-                  disabled={updating === order.id}
+                  disabled={
+                    updating === order.id ||
+                    NEXT_STATUSES[order.status].length === 0
+                  }
                   onChange={(event) =>
                     void updateStatus(
                       order,
@@ -156,9 +178,11 @@ export default function OrdersPage() {
                   className="min-h-11 w-full rounded-lg border border-line bg-white px-3 text-sm disabled:opacity-50"
                   aria-label={`Status for order ${order.orderNumber}`}
                 >
-                  {STATUSES.map((status) => (
-                    <option key={status}>{status}</option>
-                  ))}
+                  {[order.status, ...NEXT_STATUSES[order.status]].map(
+                    (status) => (
+                      <option key={status}>{status}</option>
+                    ),
+                  )}
                 </select>
               </article>
             ))}

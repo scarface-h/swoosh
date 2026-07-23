@@ -20,7 +20,7 @@ import { updateOrderStatus, cancelOrder } from "../orders/order.service.js";
 import { adjustInventory } from "../inventory/inventory.service.js";
 import { writeAuditLog } from "../audit/audit.service.js";
 import { AppError } from "../../common/errors/AppError.js";
-import { hashPassword } from "../../common/security/crypto.js";
+import { hashPassword, verifyPassword } from "../../common/security/crypto.js";
 import { env } from "../../config/env.js";
 import { cloudinary, isCloudinaryConfigured } from "../../config/cloudinary.js";
 import {
@@ -602,6 +602,84 @@ router.post(
       status: "ARCHIVED",
     });
     sendSuccess(res, product);
+  }),
+);
+router.post(
+  "/products/:id/permanent-delete",
+  requirePermission(PERMISSIONS.PRODUCTS_ARCHIVE),
+  validate({
+    body: z
+      .object({
+        password: z.string().min(1).max(500),
+        confirmation: z.string().min(1).max(200),
+      })
+      .strict(),
+  }),
+  asyncHandler(async (req, res) => {
+    const productId = String(Object.values(req.params)[0]);
+    const [admin, product] = await Promise.all([
+      prisma.adminUser.findUnique({ where: { id: req.auth!.sub } }),
+      prisma.product.findUnique({
+        where: { id: productId },
+        include: { images: true },
+      }),
+    ]);
+    if (
+      !admin ||
+      !(await verifyPassword(admin.passwordHash, req.body.password))
+    ) {
+      throw new AppError(
+        401,
+        "INVALID_CREDENTIALS",
+        "Administrator password is incorrect",
+      );
+    }
+    if (!product) throw AppError.notFound("Product not found");
+    if (req.body.confirmation !== product.name) {
+      throw AppError.validation(
+        "Confirmation must exactly match the product name",
+        { confirmation: ["Enter the complete product name exactly as shown"] },
+      );
+    }
+    const [inventoryHistory, reviews] = await Promise.all([
+      prisma.inventoryMovement.count({
+        where: { variant: { productId } },
+      }),
+      prisma.review.count({ where: { productId } }),
+    ]);
+    if (inventoryHistory > 0 || reviews > 0) {
+      throw AppError.conflict(
+        "CONFLICT",
+        "This product has inventory or review history and cannot be permanently deleted. Archive it instead to preserve business records.",
+      );
+    }
+    await prisma.$transaction(async (tx) => {
+      await tx.cartItem.deleteMany({
+        where: { variant: { productId } },
+      });
+      await tx.productVariant.deleteMany({ where: { productId } });
+      await tx.product.delete({ where: { id: productId } });
+    });
+    for (const image of product.images) {
+      if (
+        isCloudinaryConfigured &&
+        image.objectKey &&
+        image.url.includes(`res.cloudinary.com/${env.CLOUDINARY_CLOUD_NAME}/`)
+      ) {
+        await cloudinary.uploader
+          .destroy(image.objectKey, {
+            resource_type: "image",
+            invalidate: true,
+          })
+          .catch(() => undefined);
+      }
+    }
+    await audit(req, res, "product.permanent_delete", "Product", productId, {
+      name: product.name,
+      slug: product.slug,
+      imageCount: product.images.length,
+    });
+    sendSuccess(res, { deleted: true, id: productId });
   }),
 );
 router.post(
@@ -1758,21 +1836,30 @@ router.patch(
       .strict(),
   }),
   asyncHandler(async (req, res) => {
+    const targetId = String(Object.values(req.params)[0]);
+    if (
+      targetId === req.auth!.sub &&
+      (req.body.status === "SUSPENDED" || req.body.roleIds)
+    ) {
+      throw AppError.validation(
+        "You cannot suspend your own account or change your own roles",
+      );
+    }
     const { roleIds, ...data } = req.body;
     const admin = await prisma.$transaction(async (tx) => {
       if (roleIds) {
         await tx.adminRole.deleteMany({
-          where: { adminId: String(Object.values(req.params)[0]) },
+          where: { adminId: targetId },
         });
         await tx.adminRole.createMany({
           data: roleIds.map((roleId: string) => ({
             roleId,
-            adminId: String(Object.values(req.params)[0]),
+            adminId: targetId,
           })),
         });
       }
       return tx.adminUser.update({
-        where: { id: String(Object.values(req.params)[0]) },
+        where: { id: targetId },
         data: { ...data, sessionVersion: { increment: 1 } },
       });
     });

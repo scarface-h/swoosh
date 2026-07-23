@@ -5,7 +5,9 @@ import {
   PackagePlus,
   Plus,
   RefreshCw,
+  ShieldAlert,
   Sparkles,
+  Trash2,
   X,
 } from "lucide-react";
 import ProductEditModal from "@/components/products/ProductEditModal";
@@ -55,6 +57,10 @@ export default function ProductsPage() {
     [],
   );
   const [savingPlacement, setSavingPlacement] = useState(false);
+  const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -144,6 +150,37 @@ export default function ProductsPage() {
       );
     } finally {
       setSavingPlacement(false);
+    }
+  };
+
+  const permanentlyDelete = async () => {
+    if (!deletingProduct || deleting) return;
+    setDeleting(true);
+    setError("");
+    try {
+      await adminApiFetch(
+        `/admin/products/${deletingProduct.id}/permanent-delete`,
+        {
+          method: "POST",
+          body: {
+            password: deletePassword,
+            confirmation: deleteConfirmation,
+          },
+        },
+      );
+      setDeletingProduct(null);
+      setDeletePassword("");
+      setDeleteConfirmation("");
+      setNotice("Product permanently deleted.");
+      await load();
+    } catch (caught) {
+      setError(
+        caught instanceof ApiError
+          ? caught.message
+          : "Unable to delete the product.",
+      );
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -301,6 +338,20 @@ export default function ProductsPage() {
                   >
                     {product.status === "ACTIVE" ? "Archive" : "Publish"}
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setError("");
+                      setDeletePassword("");
+                      setDeleteConfirmation("");
+                      setDeletingProduct(product);
+                    }}
+                    className="grid h-10 w-10 place-items-center rounded-lg border border-error/25 text-error hover:bg-error/5"
+                    aria-label={`Permanently delete ${product.name}`}
+                    title="Permanently delete product"
+                  >
+                    <Trash2 size={15} />
+                  </button>
                 </div>
               </article>
             ))}
@@ -332,6 +383,101 @@ export default function ProductsPage() {
             void load();
           }}
         />
+      )}
+
+      {deletingProduct && (
+        <div className="fixed inset-0 z-[60] grid place-items-center p-4">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            aria-label="Close delete confirmation"
+            onClick={() => !deleting && setDeletingProduct(null)}
+          />
+          <section
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="delete-product-title"
+            className="relative z-10 w-full max-w-lg rounded-2xl border border-error/20 bg-surface p-5 shadow-2xl sm:p-6"
+          >
+            <div className="flex items-start gap-3">
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-error/10 text-error">
+                <ShieldAlert size={21} />
+              </span>
+              <div>
+                <h2
+                  id="delete-product-title"
+                  className="text-xl font-semibold text-ink"
+                >
+                  Permanently delete product?
+                </h2>
+                <p className="mt-1 text-sm leading-relaxed text-muted">
+                  This removes the product, media, options, and variants. It
+                  cannot be undone. Products with inventory or review history
+                  must be archived instead.
+                </p>
+              </div>
+            </div>
+            <div className="mt-5 space-y-4">
+              {error && (
+                <div className="rounded-xl border border-error/20 bg-error/5 px-4 py-3 text-sm text-error">
+                  {error}
+                </div>
+              )}
+              <label>
+                <span className="mb-1.5 block text-sm font-medium text-ink">
+                  Type <strong>{deletingProduct.name}</strong>
+                </span>
+                <input
+                  value={deleteConfirmation}
+                  onChange={(event) =>
+                    setDeleteConfirmation(event.target.value)
+                  }
+                  autoComplete="off"
+                  className="min-h-11 w-full rounded-xl border border-line bg-background px-3 text-sm"
+                />
+              </label>
+              <label>
+                <span className="mb-1.5 block text-sm font-medium text-ink">
+                  Your administrator password
+                </span>
+                <input
+                  type="password"
+                  value={deletePassword}
+                  onChange={(event) => setDeletePassword(event.target.value)}
+                  autoComplete="current-password"
+                  className="min-h-11 w-full rounded-xl border border-line bg-background px-3 text-sm"
+                />
+              </label>
+            </div>
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={() => setDeletingProduct(null)}
+                className="min-h-11 rounded-xl border border-line px-5 text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={
+                  deleting ||
+                  !deletePassword ||
+                  deleteConfirmation !== deletingProduct.name
+                }
+                onClick={() => void permanentlyDelete()}
+                className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-error px-5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {deleting ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <Trash2 size={16} />
+                )}
+                Delete permanently
+              </button>
+            </div>
+          </section>
+        </div>
       )}
 
       {placementProduct && (

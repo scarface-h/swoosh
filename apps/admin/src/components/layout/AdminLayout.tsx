@@ -15,15 +15,29 @@ import {
   Search,
   Settings,
   ShoppingCart,
+  Star,
   Sun,
+  LifeBuoy,
+  ShieldCheck,
   Users,
   X,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
 import { useUiStore } from "@/stores/uiStore";
 
-const navigationGroups = [
+interface NavigationItem {
+  label: string;
+  href: string;
+  icon: LucideIcon;
+  permission?: string;
+}
+
+const baseNavigationGroups: Array<{
+  label: string;
+  items: NavigationItem[];
+}> = [
   {
     label: "Overview",
     items: [{ label: "Dashboard", href: "/", icon: LayoutDashboard }],
@@ -35,15 +49,28 @@ const navigationGroups = [
       { label: "Catalog", href: "/catalog", icon: FolderTree },
       { label: "Orders", href: "/orders", icon: ShoppingCart },
       { label: "Customers", href: "/customers", icon: Users },
+      {
+        label: "Reviews",
+        href: "/reviews",
+        icon: Star,
+        permission: "reviews.moderate",
+      },
     ],
   },
   {
     label: "System",
-    items: [{ label: "Settings", href: "/settings", icon: Settings }],
+    items: [
+      {
+        label: "Admin users",
+        href: "/users",
+        icon: ShieldCheck,
+        permission: "admins.manage",
+      },
+      { label: "Settings", href: "/settings", icon: Settings },
+      { label: "Help desk", href: "/help-desk", icon: LifeBuoy },
+    ],
   },
 ];
-
-const allNavigation = navigationGroups.flatMap((group) => group.items);
 
 const pageDetails: Record<string, { title: string; description: string }> = {
   "/": {
@@ -66,9 +93,21 @@ const pageDetails: Record<string, { title: string; description: string }> = {
     title: "Customers",
     description: "Customer accounts and purchase activity",
   },
+  "/reviews": {
+    title: "Reviews",
+    description: "Moderate verified customer product feedback",
+  },
+  "/users": {
+    title: "Admin users",
+    description: "Create administrators and manage role-based access",
+  },
   "/settings": {
     title: "Settings",
     description: "Store operations, appearance and account security",
+  },
+  "/help-desk": {
+    title: "Help desk",
+    description: "Operational guidance and administrative shortcuts",
   },
 };
 
@@ -82,10 +121,27 @@ export default function AdminLayout() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const logout = useAuthStore((state) => state.logout);
+  const permissions = useAuthStore((state) => state.permissions);
   const theme = useUiStore((state) => state.theme);
   const setTheme = useUiStore((state) => state.setTheme);
   const collapsed = useUiStore((state) => state.sidebarCollapsed);
   const toggleSidebar = useUiStore((state) => state.toggleSidebar);
+  const navigationGroups = useMemo(
+    () =>
+      baseNavigationGroups
+        .map((group) => ({
+          ...group,
+          items: group.items.filter(
+            (item) => !item.permission || permissions.includes(item.permission),
+          ),
+        }))
+        .filter((group) => group.items.length > 0),
+    [permissions],
+  );
+  const allNavigation = useMemo(
+    () => navigationGroups.flatMap((group) => group.items),
+    [navigationGroups],
+  );
 
   const page =
     pageDetails[
