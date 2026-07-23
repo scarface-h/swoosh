@@ -97,6 +97,7 @@ export const defaultCatalog = [
       ["Phones & Accessories", "phones-accessories"],
       ["Computing", "computing"],
       ["Audio", "audio"],
+      ["TWS", "tws"],
       ["Smart Devices", "smart-devices"],
     ],
   },
