@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import AdminLayout from "./components/layout/AdminLayout";
 import DashboardPage from "./pages/DashboardPage";
@@ -8,8 +9,22 @@ import SettingsPage from "./pages/SettingsPage";
 import CatalogPage from "./pages/CatalogPage";
 import LoginPage from "./pages/LoginPage";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import { useUiStore } from "./stores/uiStore";
 
 export default function App() {
+  const theme = useUiStore((state) => state.theme);
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const applyTheme = () => {
+      const dark = theme === "dark" || (theme === "system" && media.matches);
+      document.documentElement.classList.toggle("dark", dark);
+    };
+    applyTheme();
+    media.addEventListener("change", applyTheme);
+    return () => media.removeEventListener("change", applyTheme);
+  }, [theme]);
+
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />

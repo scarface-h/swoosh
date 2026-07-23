@@ -64,8 +64,7 @@ export default function CustomersPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold text-ink">Customers</h1>
+      <div className="mb-6 flex items-center justify-end gap-3">
         <button
           type="button"
           onClick={() => void load()}

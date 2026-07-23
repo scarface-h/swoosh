@@ -1,11 +1,5 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import {
-  FolderTree,
-  Layers3,
-  Loader2,
-  Plus,
-  RefreshCw,
-} from "lucide-react";
+import { FolderTree, Layers3, Loader2, Plus, RefreshCw } from "lucide-react";
 import { adminApiFetch, ApiError } from "@/lib/api";
 
 interface Category {
@@ -94,7 +88,9 @@ export default function CatalogPage() {
       }
       return path.join(" / ");
     };
-    return new Map(categories.map((category) => [category.id, pathFor(category)]));
+    return new Map(
+      categories.map((category) => [category.id, pathFor(category)]),
+    );
   }, [categories]);
 
   const sortedCategories = useMemo(
@@ -130,7 +126,9 @@ export default function CatalogPage() {
       setParentId("");
       setCategoryDescription("");
       setCategoryImage("");
-      setNotice("Category created. It is now available in products and the shop.");
+      setNotice(
+        "Category created. It is now available in products and the shop.",
+      );
       await load();
     } catch (caught) {
       setError(
@@ -205,13 +203,7 @@ export default function CatalogPage() {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-ink">Catalog</h1>
-          <p className="mt-1 text-sm text-muted">
-            One taxonomy powers product creation, filters, and storefront menus.
-          </p>
-        </div>
+      <div className="mb-6 flex flex-wrap items-center justify-end gap-3">
         <button
           type="button"
           onClick={() => void load()}
@@ -290,7 +282,9 @@ export default function CatalogPage() {
               <input
                 required
                 value={categorySlug}
-                onChange={(event) => setCategorySlug(slugify(event.target.value))}
+                onChange={(event) =>
+                  setCategorySlug(slugify(event.target.value))
+                }
                 className="mt-2 min-h-11 w-full rounded-lg border border-line bg-background px-3 outline-none focus:border-accent"
               />
             </label>
@@ -332,7 +326,11 @@ export default function CatalogPage() {
               disabled={saving}
               className="mt-5 flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-medium text-white disabled:opacity-50"
             >
-              {saving ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+              {saving ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Plus size={16} />
+              )}
               Add category
             </button>
           </form>
@@ -354,7 +352,9 @@ export default function CatalogPage() {
                     <p className="truncate text-sm font-medium text-ink">
                       {categoryPaths.get(category.id)}
                     </p>
-                    <p className="truncate text-xs text-muted">/{category.slug}</p>
+                    <p className="truncate text-xs text-muted">
+                      /{category.slug}
+                    </p>
                   </div>
                   <button
                     type="button"
@@ -399,7 +399,9 @@ export default function CatalogPage() {
               <input
                 required
                 value={collectionSlug}
-                onChange={(event) => setCollectionSlug(slugify(event.target.value))}
+                onChange={(event) =>
+                  setCollectionSlug(slugify(event.target.value))
+                }
                 className="mt-2 min-h-11 w-full rounded-lg border border-line bg-background px-3"
               />
             </label>
@@ -407,7 +409,9 @@ export default function CatalogPage() {
               Description
               <textarea
                 value={collectionDescription}
-                onChange={(event) => setCollectionDescription(event.target.value)}
+                onChange={(event) =>
+                  setCollectionDescription(event.target.value)
+                }
                 rows={3}
                 className="mt-2 w-full rounded-lg border border-line bg-background p-3"
               />
@@ -426,7 +430,9 @@ export default function CatalogPage() {
               <input
                 type="checkbox"
                 checked={collectionFeatured}
-                onChange={(event) => setCollectionFeatured(event.target.checked)}
+                onChange={(event) =>
+                  setCollectionFeatured(event.target.checked)
+                }
                 className="h-4 w-4 accent-accent"
               />
               Feature this collection
@@ -435,7 +441,11 @@ export default function CatalogPage() {
               disabled={saving}
               className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-medium text-white disabled:opacity-50"
             >
-              {saving ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+              {saving ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Plus size={16} />
+              )}
               Add collection
             </button>
           </form>

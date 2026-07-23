@@ -3,8 +3,26 @@
 @tailwind utilities;
 
 html {
-  background-color: #F5F3EF;
+  --background: 246 247 249;
+  --surface: 255 255 255;
+  --ink: 22 24 29;
+  --muted: 100 105 116;
+  --line: 226 229 235;
+  --accent: 184 68 42;
+  --dark: 19 21 26;
+  background-color: rgb(var(--background));
   overflow-x: clip;
+}
+
+html.dark {
+  --background: 17 19 23;
+  --surface: 25 28 34;
+  --ink: 243 244 246;
+  --muted: 158 164 175;
+  --line: 48 52 61;
+  --accent: 222 94 64;
+  --dark: 12 14 17;
+  color-scheme: dark;
 }
 
 body {
@@ -12,17 +30,48 @@ body {
   min-height: 100vh;
   margin: 0;
   overflow-x: clip;
-  background-color: #F5F3EF;
-  color: #191817;
+  background-color: rgb(var(--background));
+  color: rgb(var(--ink));
   font-family: "Inter", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
-#root { min-height: 100dvh; }
-button, input, select, textarea { font: inherit; }
-button, a { -webkit-tap-highlight-color: transparent; }
+#root {
+  min-height: 100dvh;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.dark .bg-white,
+.dark input:not([type="checkbox"]):not([type="radio"]),
+.dark select,
+.dark textarea {
+  background-color: rgb(var(--surface));
+  color: rgb(var(--ink));
+  border-color: rgb(var(--line));
+}
+
+.dark .bg-\[\#edf0f6\] {
+  background-color: rgb(var(--background));
+}
+
+.dark .bg-red-50 {
+  background-color: rgb(127 29 29 / 0.16);
+}
+
+* {
+  scrollbar-color: rgb(var(--line)) transparent;
+}
 
 *:focus-visible {
-  outline: 2px solid #B8442A;
+  outline: 2px solid #b8442a;
   outline-offset: 2px;
 }

@@ -1,6 +1,18 @@
 import { useEffect, useState } from "react";
-import { Loader2, Save } from "lucide-react";
+import {
+  Check,
+  Loader2,
+  Monitor,
+  Moon,
+  Palette,
+  Save,
+  Shield,
+  Store,
+  Sun,
+  Wrench,
+} from "lucide-react";
 import { adminApiFetch, ApiError } from "@/lib/api";
+import { type AdminTheme, useUiStore } from "@/stores/uiStore";
 
 interface SettingRecord {
   key: string;
@@ -8,7 +20,10 @@ interface SettingRecord {
   isPublic: boolean;
 }
 
+type Tab = "store" | "operations" | "security" | "appearance";
+
 export default function SettingsPage() {
+  const [tab, setTab] = useState<Tab>("store");
   const [storeName, setStoreName] = useState("Swoosh Shop");
   const [maintenanceActive, setMaintenanceActive] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState("");
@@ -22,6 +37,10 @@ export default function SettingsPage() {
     confirmPassword: "",
   });
   const [changingPassword, setChangingPassword] = useState(false);
+  const theme = useUiStore((state) => state.theme);
+  const setTheme = useUiStore((state) => state.setTheme);
+  const collapsed = useUiStore((state) => state.sidebarCollapsed);
+  const setSidebarCollapsed = useUiStore((state) => state.setSidebarCollapsed);
 
   useEffect(() => {
     adminApiFetch<SettingRecord[]>("/admin/settings")
@@ -128,30 +147,91 @@ export default function SettingsPage() {
     }
   };
 
+  const tabs = [
+    {
+      id: "store" as const,
+      label: "Store profile",
+      description: "Name and identity",
+      icon: Store,
+    },
+    {
+      id: "operations" as const,
+      label: "Operations",
+      description: "Maintenance controls",
+      icon: Wrench,
+    },
+    {
+      id: "security" as const,
+      label: "Security",
+      description: "Password and sessions",
+      icon: Shield,
+    },
+    {
+      id: "appearance" as const,
+      label: "Appearance",
+      description: "Theme and navigation",
+      icon: Palette,
+    },
+  ];
+
   return (
-    <div>
-      <h1 className="mb-6 text-2xl font-semibold text-ink">Settings</h1>
-      <form
-        onSubmit={save}
-        className="max-w-2xl space-y-6 rounded-xl border border-line bg-surface p-5 sm:p-6"
-      >
+    <div className="grid gap-6 lg:grid-cols-[240px_minmax(0,760px)]">
+      <aside className="h-fit rounded-2xl border border-line bg-surface p-2 lg:sticky lg:top-28">
+        {tabs.map((item) => (
+          <button
+            type="button"
+            key={item.id}
+            onClick={() => {
+              setTab(item.id);
+              setError("");
+              setMessage("");
+            }}
+            className={`flex min-h-16 w-full items-center gap-3 rounded-xl px-3 text-left transition ${
+              tab === item.id
+                ? "bg-dark text-white"
+                : "text-muted hover:bg-background hover:text-ink"
+            }`}
+          >
+            <item.icon size={18} className="shrink-0" />
+            <span>
+              <span className="block text-sm font-semibold">{item.label}</span>
+              <span
+                className={`mt-0.5 block text-xs ${
+                  tab === item.id ? "text-white/50" : "text-muted"
+                }`}
+              >
+                {item.description}
+              </span>
+            </span>
+          </button>
+        ))}
+      </aside>
+
+      <main>
+        {error && (
+          <div className="mb-4 rounded-xl border border-error/20 bg-error/5 px-4 py-3 text-sm text-error">
+            {error}
+          </div>
+        )}
+        {message && (
+          <div className="mb-4 rounded-xl border border-success/20 bg-success/5 px-4 py-3 text-sm text-success">
+            {message}
+          </div>
+        )}
         {loading ? (
-          <div className="flex min-h-32 items-center justify-center gap-2 text-sm text-muted">
+          <div className="flex min-h-64 items-center justify-center gap-2 rounded-2xl border border-line bg-surface text-sm text-muted">
             <Loader2 size={17} className="animate-spin text-accent" />
             Loading settings…
           </div>
-        ) : (
-          <>
-            {error && (
-              <div className="rounded-lg border border-error/20 bg-error/5 px-4 py-3 text-sm text-error">
-                {error}
-              </div>
-            )}
-            {message && (
-              <div className="rounded-lg border border-success/20 bg-success/5 px-4 py-3 text-sm text-success">
-                {message}
-              </div>
-            )}
+        ) : tab === "store" ? (
+          <form
+            onSubmit={save}
+            className="space-y-6 rounded-2xl border border-line bg-surface p-5 sm:p-7"
+          >
+            <SettingsHeading
+              title="Store profile"
+              description="The public identity used across the storefront and admin."
+            />
             <label>
               <span className="mb-1.5 block text-sm font-medium text-ink">
                 Store name
@@ -161,96 +241,206 @@ export default function SettingsPage() {
                 maxLength={160}
                 value={storeName}
                 onChange={(event) => setStoreName(event.target.value)}
-                className="min-h-11 w-full rounded-lg border border-line bg-white px-3 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+                className="min-h-12 w-full rounded-xl border border-line bg-white px-3 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
               />
+              <span className="mt-1.5 block text-xs text-muted">
+                Customers may see this name in storefront metadata and notices.
+              </span>
             </label>
-            <div className="border-t border-line pt-5">
-              <label className="flex items-center gap-3 text-sm font-medium">
+            <SaveButton saving={saving} />
+          </form>
+        ) : tab === "operations" ? (
+          <form
+            onSubmit={save}
+            className="space-y-6 rounded-2xl border border-line bg-surface p-5 sm:p-7"
+          >
+            <SettingsHeading
+              title="Store operations"
+              description="Control customer-facing availability without changing product data."
+            />
+            <label className="flex cursor-pointer items-start gap-4 rounded-xl border border-line bg-background p-4">
+              <input
+                type="checkbox"
+                checked={maintenanceActive}
+                onChange={(event) => setMaintenanceActive(event.target.checked)}
+                className="mt-1 h-4 w-4 accent-accent"
+              />
+              <span>
+                <span className="block text-sm font-semibold text-ink">
+                  Enable maintenance notice
+                </span>
+                <span className="mt-1 block text-xs leading-relaxed text-muted">
+                  Display an operational message while preserving catalog and
+                  order data.
+                </span>
+              </span>
+            </label>
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-medium text-ink">
+                Customer-facing message
+              </span>
+              <textarea
+                rows={5}
+                maxLength={500}
+                value={maintenanceMessage}
+                onChange={(event) => setMaintenanceMessage(event.target.value)}
+                placeholder="We are making improvements and will be back shortly."
+                className="w-full rounded-xl border border-line bg-white px-3 py-3 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+              />
+              <span className="mt-1.5 block text-xs text-muted">
+                {maintenanceMessage.length}/500 characters
+              </span>
+            </label>
+            <SaveButton saving={saving} />
+          </form>
+        ) : tab === "security" ? (
+          <form
+            onSubmit={changePassword}
+            className="space-y-5 rounded-2xl border border-line bg-surface p-5 sm:p-7"
+          >
+            <SettingsHeading
+              title="Account security"
+              description="Change the administrator password and revoke all existing sessions."
+            />
+            <div className="rounded-xl border border-warning/20 bg-warning/5 p-4 text-sm leading-relaxed text-warning">
+              Use at least 12 characters. After the change, sign in again on
+              every device.
+            </div>
+            {[
+              ["currentPassword", "Current password"],
+              ["newPassword", "New password"],
+              ["confirmPassword", "Confirm new password"],
+            ].map(([key, fieldLabel]) => (
+              <label key={key}>
+                <span className="mb-1.5 block text-sm font-medium">
+                  {fieldLabel}
+                </span>
+                <input
+                  required
+                  type="password"
+                  minLength={key === "currentPassword" ? 1 : 12}
+                  autoComplete={
+                    key === "currentPassword"
+                      ? "current-password"
+                      : "new-password"
+                  }
+                  value={passwords[key as keyof typeof passwords]}
+                  onChange={(event) =>
+                    setPasswords((current) => ({
+                      ...current,
+                      [key]: event.target.value,
+                    }))
+                  }
+                  className="min-h-12 w-full rounded-xl border border-line bg-white px-3 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+                />
+              </label>
+            ))}
+            <button
+              type="submit"
+              disabled={changingPassword}
+              className="flex min-h-11 items-center gap-2 rounded-xl bg-ink px-5 text-sm font-semibold text-surface disabled:opacity-50"
+            >
+              {changingPassword && (
+                <Loader2 size={16} className="animate-spin" />
+              )}
+              {changingPassword ? "Changing…" : "Change password"}
+            </button>
+          </form>
+        ) : (
+          <section className="space-y-7 rounded-2xl border border-line bg-surface p-5 sm:p-7">
+            <SettingsHeading
+              title="Admin appearance"
+              description="Personal preferences are stored in this browser and do not affect customers."
+            />
+            <div>
+              <p className="mb-3 text-sm font-medium text-ink">Color theme</p>
+              <div className="grid gap-3 sm:grid-cols-3">
+                {[
+                  { id: "light" as AdminTheme, label: "Light", icon: Sun },
+                  { id: "dark" as AdminTheme, label: "Dark", icon: Moon },
+                  {
+                    id: "system" as AdminTheme,
+                    label: "System",
+                    icon: Monitor,
+                  },
+                ].map((option) => (
+                  <button
+                    type="button"
+                    key={option.id}
+                    onClick={() => setTheme(option.id)}
+                    className={`relative flex min-h-24 flex-col items-center justify-center gap-2 rounded-xl border text-sm font-semibold ${
+                      theme === option.id
+                        ? "border-accent bg-accent/5 text-accent"
+                        : "border-line bg-background text-ink"
+                    }`}
+                  >
+                    <option.icon size={21} />
+                    {option.label}
+                    {theme === option.id && (
+                      <Check size={15} className="absolute right-2.5 top-2.5" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="border-t border-line pt-6">
+              <p className="mb-3 text-sm font-medium text-ink">
+                Desktop navigation
+              </p>
+              <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-line bg-background p-4">
+                <span>
+                  <span className="block text-sm font-semibold text-ink">
+                    Compact sidebar
+                  </span>
+                  <span className="mt-1 block text-xs text-muted">
+                    Show icons only to create more working space.
+                  </span>
+                </span>
                 <input
                   type="checkbox"
-                  checked={maintenanceActive}
+                  checked={collapsed}
                   onChange={(event) =>
-                    setMaintenanceActive(event.target.checked)
+                    setSidebarCollapsed(event.target.checked)
                   }
                   className="h-4 w-4 accent-accent"
                 />
-                Enable maintenance notice
-              </label>
-              <label className="mt-4 block">
-                <span className="mb-1.5 block text-sm text-muted">
-                  Customer-facing message
-                </span>
-                <textarea
-                  rows={3}
-                  maxLength={500}
-                  value={maintenanceMessage}
-                  onChange={(event) =>
-                    setMaintenanceMessage(event.target.value)
-                  }
-                  className="w-full rounded-lg border border-line bg-white px-3 py-2.5 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
-                />
               </label>
             </div>
-            <button
-              type="submit"
-              disabled={saving}
-              className="flex min-h-11 items-center gap-2 rounded-lg bg-accent px-5 text-sm font-medium text-white disabled:opacity-50"
-            >
-              {saving ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : (
-                <Save size={16} />
-              )}
-              {saving ? "Saving…" : "Save settings"}
-            </button>
-          </>
+          </section>
         )}
-      </form>
-
-      <form
-        onSubmit={changePassword}
-        className="mt-6 max-w-2xl space-y-5 rounded-xl border border-line bg-surface p-5 sm:p-6"
-      >
-        <div>
-          <h2 className="text-lg font-medium text-ink">Change password</h2>
-          <p className="mt-1 text-sm text-muted">
-            Changing the password revokes all existing admin sessions.
-          </p>
-        </div>
-        {[
-          ["currentPassword", "Current password"],
-          ["newPassword", "New password"],
-          ["confirmPassword", "Confirm new password"],
-        ].map(([key, label]) => (
-          <label key={key}>
-            <span className="mb-1.5 block text-sm font-medium">{label}</span>
-            <input
-              required
-              type="password"
-              minLength={key === "currentPassword" ? 1 : 12}
-              autoComplete={
-                key === "currentPassword" ? "current-password" : "new-password"
-              }
-              value={passwords[key as keyof typeof passwords]}
-              onChange={(event) =>
-                setPasswords((current) => ({
-                  ...current,
-                  [key]: event.target.value,
-                }))
-              }
-              className="min-h-11 w-full rounded-lg border border-line bg-white px-3 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
-            />
-          </label>
-        ))}
-        <button
-          type="submit"
-          disabled={changingPassword}
-          className="flex min-h-11 items-center gap-2 rounded-lg bg-ink px-5 text-sm font-medium text-white disabled:opacity-50"
-        >
-          {changingPassword && <Loader2 size={16} className="animate-spin" />}
-          {changingPassword ? "Changing…" : "Change password"}
-        </button>
-      </form>
+      </main>
     </div>
+  );
+}
+
+function SettingsHeading({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="border-b border-line pb-5">
+      <h2 className="text-xl font-semibold text-ink">{title}</h2>
+      <p className="mt-1 text-sm leading-relaxed text-muted">{description}</p>
+    </div>
+  );
+}
+
+function SaveButton({ saving }: { saving: boolean }) {
+  return (
+    <button
+      type="submit"
+      disabled={saving}
+      className="flex min-h-11 items-center gap-2 rounded-xl bg-accent px-5 text-sm font-semibold text-white disabled:opacity-50"
+    >
+      {saving ? (
+        <Loader2 size={16} className="animate-spin" />
+      ) : (
+        <Save size={16} />
+      )}
+      {saving ? "Saving…" : "Save settings"}
+    </button>
   );
 }
