@@ -20,11 +20,16 @@ html {
   scroll-behavior: smooth;
   background: var(--color-background);
   overflow-x: clip;
+  width: 100%;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html { scroll-behavior: auto; }
-  *, *::before, *::after {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
@@ -33,7 +38,9 @@ html {
 }
 
 body {
+  width: 100%;
   min-width: 320px;
+  max-width: 100%;
   min-height: 100vh;
   margin: 0;
   overflow-x: clip;
@@ -45,14 +52,38 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-#root { min-height: 100dvh; }
+#root {
+  width: 100%;
+  max-width: 100%;
+  min-height: 100dvh;
+  overflow-x: clip;
+}
 
-button, input, select, textarea { font: inherit; }
-button, a { -webkit-tap-highlight-color: transparent; }
-img { display: block; max-width: 100%; }
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+img {
+  display: block;
+  max-width: 100%;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
 
 @media (max-width: 639px) {
-  body { font-size: 15px; }
+  body {
+    font-size: 15px;
+  }
 }
 
 ::selection {

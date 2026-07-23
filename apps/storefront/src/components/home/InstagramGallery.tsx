@@ -21,11 +21,15 @@ export default function InstagramGallery() {
         initial={{ opacity: 0, y: 20 }}
         animate={inView ? { opacity: 1, y: 0 } : {}}
         transition={{ duration: 0.5 }}
-        className="flex items-end justify-between mb-8"
+        className="mb-8 flex flex-wrap items-end justify-between gap-3"
       >
         <div>
-          <p className="text-xs tracking-[0.3em] uppercase text-muted mb-2">INSTAGRAM</p>
-          <h2 className="font-serif text-3xl text-ink">Follow Our Story</h2>
+          <p className="text-xs tracking-[0.3em] uppercase text-muted mb-2">
+            INSTAGRAM
+          </p>
+          <h2 className="font-serif text-2xl text-ink sm:text-3xl">
+            Follow Our Story
+          </h2>
         </div>
         <a
           href="https://instagram.com/swoosh.bd"
@@ -37,7 +41,7 @@ export default function InstagramGallery() {
         </a>
       </motion.div>
 
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 sm:gap-2">
         {images.map(({ seed, colSpan }, i) => (
           <motion.div
             key={seed}
