@@ -28,12 +28,38 @@ const slugify = (value: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
-const messageFor = (error: unknown) =>
-  error instanceof ApiError
+const fieldLabels: Record<string, string> = {
+  name: "Product name",
+  slug: "URL slug",
+  categoryId: "Category",
+  skuPrefix: "SKU prefix",
+  shortDescription: "Short description",
+  description: "Description",
+  regularPrice: "Regular price",
+  salePrice: "Sale price",
+  status: "Status",
+  tags: "Tags",
+  collectionIds: "Collections",
+  sku: "Variant SKU",
+  optionValueIds: "Variant options",
+  quantity: "Initial stock",
+};
+
+const messageFor = (error: unknown) => {
+  if (error instanceof ApiError) {
+    const details = Object.entries(error.fields ?? {})
+      .flatMap(([field, messages]) =>
+        messages.map(
+          (message) => `${fieldLabels[field] ?? field}: ${message}`,
+        ),
+      )
+      .join(" ");
+    return details ? `${error.message}. ${details}` : error.message;
+  }
+  return error instanceof Error
     ? error.message
-    : error instanceof Error
-      ? error.message
-      : "Unable to create the product.";
+    : "Unable to create the product.";
+};
 
 export default function ProductCreateModal({
   categories,
@@ -198,6 +224,44 @@ export default function ProductCreateModal({
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (saving) return;
+    const regularPrice = Number(form.regularPrice);
+    const salePrice = form.salePrice ? Number(form.salePrice) : null;
+    const initialStock = Number(form.initialStock);
+    const tags = form.tags
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+    const validationError =
+      !form.name.trim()
+        ? "Enter a product name."
+        : !form.slug.trim()
+          ? "Enter a valid URL slug."
+          : !form.categoryId
+            ? "Select a category."
+            : !form.variantSku.trim()
+              ? "Enter an initial variant SKU."
+              : !form.size.trim() && !form.color.trim()
+                ? "Enter at least one variant option: size or colour."
+                : !form.description.trim()
+                  ? "Enter a product description."
+                  : !Number.isFinite(regularPrice) || regularPrice <= 0
+                    ? "Regular price must be greater than zero."
+                    : salePrice !== null &&
+                        (!Number.isFinite(salePrice) || salePrice <= 0)
+                      ? "Sale price must be greater than zero."
+                      : salePrice !== null && salePrice >= regularPrice
+                        ? "Sale price must be lower than the regular price."
+                        : !Number.isInteger(initialStock) || initialStock < 0
+                          ? "Initial stock must be a whole number of zero or more."
+                          : tags.length > 30
+                            ? "Use no more than 30 tags."
+                            : tags.some((tag) => tag.length > 50)
+                              ? "Each tag must be 50 characters or shorter."
+                              : "";
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
     if (image && image.size > 10 * 1024 * 1024) {
       setError("The image must be 10 MB or smaller.");
       return;
@@ -210,20 +274,17 @@ export default function ProductCreateModal({
         method: "POST",
         body: {
           name: form.name.trim(),
-          slug: form.slug,
+          slug: form.slug.trim(),
           categoryId: form.categoryId,
           skuPrefix: form.skuPrefix.trim() || null,
           shortDescription: form.shortDescription.trim() || null,
           description: form.description.trim(),
-          regularPrice: Number(form.regularPrice),
-          salePrice: form.salePrice ? Number(form.salePrice) : null,
+          regularPrice,
+          salePrice,
           status: form.status,
           isFeatured: form.isFeatured,
           isNewArrival: form.isNewArrival,
-          tags: form.tags
-            .split(",")
-            .map((tag) => tag.trim())
-            .filter(Boolean),
+          tags,
           collectionIds: [],
         },
       });
@@ -394,7 +455,6 @@ export default function ProductCreateModal({
             <label>
               <span className="mb-1.5 block text-sm font-medium">Size</span>
               <input
-                required
                 value={form.size}
                 onChange={(event) => update("size", event.target.value)}
                 className={fieldClass}
