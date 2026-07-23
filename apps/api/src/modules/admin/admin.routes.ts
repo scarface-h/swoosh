@@ -50,6 +50,63 @@ const audit = (
     ipAddress: req.ip,
     userAgent: req.get("user-agent"),
   });
+const removeStoredImageWhenUnreferenced = async (image: {
+  id: string;
+  url: string;
+  objectKey: string | null;
+}) => {
+  const references = await prisma.productImage.count({
+    where: {
+      id: { not: image.id },
+      OR: [
+        ...(image.objectKey ? [{ objectKey: image.objectKey }] : []),
+        { url: image.url },
+      ],
+    },
+  });
+  if (references > 0) return false;
+  try {
+    if (
+      isCloudinaryConfigured &&
+      image.objectKey &&
+      image.url.includes(`res.cloudinary.com/${env.CLOUDINARY_CLOUD_NAME}/`)
+    ) {
+      await cloudinary.uploader.destroy(image.objectKey, {
+        resource_type: "image",
+        invalidate: true,
+      });
+      return true;
+    }
+    if (
+      image.objectKey &&
+      env.S3_BUCKET &&
+      env.S3_REGION &&
+      env.S3_ACCESS_KEY_ID &&
+      env.S3_SECRET_ACCESS_KEY
+    ) {
+      const client = new S3Client({
+        region: env.S3_REGION,
+        endpoint: env.S3_ENDPOINT,
+        forcePathStyle: Boolean(env.S3_ENDPOINT),
+        credentials: {
+          accessKeyId: env.S3_ACCESS_KEY_ID,
+          secretAccessKey: env.S3_SECRET_ACCESS_KEY,
+        },
+      });
+      await client.send(
+        new DeleteObjectCommand({
+          Bucket: env.S3_BUCKET,
+          Key: image.objectKey,
+        }),
+      );
+      return true;
+    }
+  } catch {
+    // The database record is already gone. Storage cleanup can be retried
+    // independently without turning a successful admin delete into a 500.
+  }
+  return false;
+};
 const pagination = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
@@ -660,20 +717,9 @@ router.post(
       await tx.productVariant.deleteMany({ where: { productId } });
       await tx.product.delete({ where: { id: productId } });
     });
-    for (const image of product.images) {
-      if (
-        isCloudinaryConfigured &&
-        image.objectKey &&
-        image.url.includes(`res.cloudinary.com/${env.CLOUDINARY_CLOUD_NAME}/`)
-      ) {
-        await cloudinary.uploader
-          .destroy(image.objectKey, {
-            resource_type: "image",
-            invalidate: true,
-          })
-          .catch(() => undefined);
-      }
-    }
+    await Promise.all(
+      product.images.map((image) => removeStoredImageWhenUnreferenced(image)),
+    );
     await audit(req, res, "product.permanent_delete", "Product", productId, {
       name: product.name,
       slug: product.slug,
@@ -1069,41 +1115,22 @@ router.delete(
       where: { id: String(Object.values(req.params)[0]) },
     });
     if (!image) throw AppError.notFound("Image not found");
-    const isCloudinaryImage =
-      isCloudinaryConfigured &&
-      Boolean(image.objectKey) &&
-      image.url.includes(`res.cloudinary.com/${env.CLOUDINARY_CLOUD_NAME}/`);
-    if (isCloudinaryImage) {
-      await cloudinary.uploader.destroy(image.objectKey!, {
-        resource_type: "image",
-        invalidate: true,
-      });
-    } else if (
-      image.objectKey &&
-      env.S3_BUCKET &&
-      env.S3_REGION &&
-      env.S3_ACCESS_KEY_ID &&
-      env.S3_SECRET_ACCESS_KEY
-    ) {
-      const client = new S3Client({
-        region: env.S3_REGION,
-        endpoint: env.S3_ENDPOINT,
-        forcePathStyle: Boolean(env.S3_ENDPOINT),
-        credentials: {
-          accessKeyId: env.S3_ACCESS_KEY_ID,
-          secretAccessKey: env.S3_SECRET_ACCESS_KEY,
-        },
-      });
-      await client.send(
-        new DeleteObjectCommand({
-          Bucket: env.S3_BUCKET,
-          Key: image.objectKey,
-        }),
-      );
-    }
     await prisma.productImage.delete({ where: { id: image.id } });
-    await audit(req, res, "product.image_delete", "ProductImage", image.id);
-    sendSuccess(res, { deleted: true, objectKey: image.objectKey });
+    const storageDeleted = await removeStoredImageWhenUnreferenced(image);
+    await audit(
+      req,
+      res,
+      "product.image_delete",
+      "ProductImage",
+      image.id,
+      undefined,
+      { storageDeleted },
+    );
+    sendSuccess(res, {
+      deleted: true,
+      objectKey: image.objectKey,
+      storageDeleted,
+    });
   }),
 );
 
