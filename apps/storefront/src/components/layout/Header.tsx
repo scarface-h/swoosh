@@ -20,12 +20,75 @@ import { useCartStore } from "@/stores/cartStore";
 import { useWishlistStore } from "@/stores/wishlistStore";
 
 const preferredDepartments = ["men", "women", "accessories"];
+const fallbackCategories: PublicCategory[] = [
+  {
+    id: "fallback-men",
+    name: "Men",
+    slug: "men",
+    children: [
+      { id: "fallback-men-tshirts", name: "T-Shirts", slug: "t-shirts" },
+      { id: "fallback-men-shirts", name: "Shirts", slug: "mens-shirts" },
+      {
+        id: "fallback-men-hoodies",
+        name: "Hoodies & Sweatshirts",
+        slug: "mens-hoodies-sweatshirts",
+      },
+      { id: "fallback-men-jeans", name: "Jeans", slug: "mens-jeans" },
+    ],
+  },
+  {
+    id: "fallback-women",
+    name: "Women",
+    slug: "women",
+    children: [
+      { id: "fallback-women-dresses", name: "Dresses", slug: "womens-dresses" },
+      {
+        id: "fallback-women-tops",
+        name: "Tops & T-Shirts",
+        slug: "womens-tops-t-shirts",
+      },
+      { id: "fallback-women-sarees", name: "Sarees", slug: "womens-sarees" },
+      {
+        id: "fallback-women-modest",
+        name: "Modest Wear",
+        slug: "womens-modest-wear",
+      },
+    ],
+  },
+  {
+    id: "fallback-accessories",
+    name: "Accessories",
+    slug: "accessories",
+    children: [
+      { id: "fallback-bags", name: "Bags", slug: "bags" },
+      { id: "fallback-watches", name: "Watches", slug: "watches" },
+      { id: "fallback-jewellery", name: "Jewellery", slug: "jewellery" },
+      { id: "fallback-sunglasses", name: "Sunglasses", slug: "sunglasses" },
+    ],
+  },
+  { id: "fallback-footwear", name: "Footwear", slug: "footwear" },
+  { id: "fallback-kids", name: "Kids", slug: "kids" },
+  { id: "fallback-beauty", name: "Beauty & Care", slug: "beauty-care" },
+];
+const fallbackCollections: PublicCollection[] = [
+  {
+    id: "fallback-new-arrivals",
+    name: "New Arrivals",
+    slug: "new-arrivals",
+    description: null,
+    bannerUrl: null,
+    seoTitle: null,
+    seoDescription: null,
+  },
+];
 
 export default function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [categories, setCategories] = useState<PublicCategory[]>([]);
-  const [collections, setCollections] = useState<PublicCollection[]>([]);
+  const [categories, setCategories] =
+    useState<PublicCategory[]>(fallbackCategories);
+  const [collections, setCollections] =
+    useState<PublicCollection[]>(fallbackCollections);
   const { pathname } = useLocation();
   const itemCount = useCartStore((state) => state.itemCount());
   const wishlistCount = useWishlistStore((state) => state.items.length);
@@ -44,18 +107,43 @@ export default function Header() {
   }, []);
 
   useEffect(() => {
-    Promise.all([
-      apiFetch<PublicCategory[]>("/categories"),
-      apiFetch<PublicCollection[]>("/collections"),
-    ])
-      .then(([nextCategories, nextCollections]) => {
-        setCategories(nextCategories);
-        setCollections(nextCollections);
-      })
-      .catch(() => {
-        setCategories([]);
-        setCollections([]);
-      });
+    let cancelled = false;
+    const retryTimers: number[] = [];
+    const loadCategories = (attempt = 0) => {
+      apiFetch<PublicCategory[]>("/categories")
+        .then((items) => {
+          if (!cancelled && items.length) setCategories(items);
+        })
+        .catch(() => {
+          if (!cancelled && attempt < 2) {
+            retryTimers.push(
+              window.setTimeout(() => loadCategories(attempt + 1), 1500 * (attempt + 1)),
+            );
+          }
+        });
+    };
+    const loadCollections = (attempt = 0) => {
+      apiFetch<PublicCollection[]>("/collections")
+        .then((items) => {
+          if (!cancelled && items.length) setCollections(items);
+        })
+        .catch(() => {
+          if (!cancelled && attempt < 2) {
+            retryTimers.push(
+              window.setTimeout(
+                () => loadCollections(attempt + 1),
+                1500 * (attempt + 1),
+              ),
+            );
+          }
+        });
+    };
+    loadCategories();
+    loadCollections();
+    return () => {
+      cancelled = true;
+      retryTimers.forEach(window.clearTimeout);
+    };
   }, []);
 
   useEffect(() => {
