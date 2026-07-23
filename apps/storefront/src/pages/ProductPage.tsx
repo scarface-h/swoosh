@@ -224,7 +224,7 @@ export default function ProductPage() {
                 key={displayImage}
                 src={displayImage}
                 alt={product.images[activeImage]?.alt ?? product.name}
-                className="h-full w-full object-cover"
+                className="h-full w-full object-contain"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
               />
