@@ -3,7 +3,6 @@ import { motion, useInView } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { formatCurrency } from "@swoosh/utilities";
-import { cn } from "@/lib/utils";
 
 interface Product {
   id: string;
@@ -38,7 +37,10 @@ export default function NewArrivalsRail({ products }: Props) {
 
   const scroll = (dir: "left" | "right") => {
     if (!railRef.current) return;
-    railRef.current.scrollBy({ left: dir === "right" ? 320 : -320, behavior: "smooth" });
+    railRef.current.scrollBy({
+      left: dir === "right" ? 320 : -320,
+      behavior: "smooth",
+    });
   };
 
   return (
@@ -50,8 +52,12 @@ export default function NewArrivalsRail({ products }: Props) {
         className="flex items-end justify-between mb-8"
       >
         <div>
-          <p className="text-xs tracking-[0.3em] uppercase text-muted mb-2">NEW ARRIVALS</p>
-          <h2 className="font-serif text-2xl sm:text-3xl text-ink">Just Dropped</h2>
+          <p className="text-xs tracking-[0.3em] uppercase text-muted mb-2">
+            NEW ARRIVALS
+          </p>
+          <h2 className="font-serif text-2xl sm:text-3xl text-ink">
+            Just Dropped
+          </h2>
         </div>
         <div className="flex items-center gap-4">
           <div className="hidden md:flex gap-2">
@@ -85,7 +91,9 @@ export default function NewArrivalsRail({ products }: Props) {
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
         {products.length === 0
-          ? Array.from({ length: 5 }).map((_, i) => <PlaceholderCard key={i} index={i} />)
+          ? Array.from({ length: 5 }).map((_, i) => (
+              <PlaceholderCard key={i} index={i} />
+            ))
           : products.map((product, i) => (
               <motion.div
                 key={product.id}
@@ -96,23 +104,35 @@ export default function NewArrivalsRail({ products }: Props) {
               >
                 <Link to={`/product/${product.slug}`} className="block group">
                   <div className="aspect-[4/5] overflow-hidden bg-surface">
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      loading="lazy"
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
+                    {product.image ? (
+                      <img
+                        src={product.image}
+                        alt={product.name}
+                        loading="lazy"
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="grid h-full place-items-center px-4 text-center text-sm text-muted">
+                        Image coming soon
+                      </div>
+                    )}
                   </div>
                   <div className="mt-3">
                     <p className="text-sm text-ink">{product.name}</p>
                     <div className="flex gap-2 mt-1">
                       {product.salePrice ? (
                         <>
-                          <span className="text-sm text-accent">{formatCurrency(product.salePrice)}</span>
-                          <span className="text-sm text-muted line-through">{formatCurrency(product.price)}</span>
+                          <span className="text-sm text-accent">
+                            {formatCurrency(product.salePrice)}
+                          </span>
+                          <span className="text-sm text-muted line-through">
+                            {formatCurrency(product.price)}
+                          </span>
                         </>
                       ) : (
-                        <span className="text-sm text-ink">{formatCurrency(product.price)}</span>
+                        <span className="text-sm text-ink">
+                          {formatCurrency(product.price)}
+                        </span>
                       )}
                     </div>
                   </div>

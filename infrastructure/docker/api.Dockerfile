@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-FROM node:22.22-alpine AS dependencies
+FROM node:24-alpine AS dependencies
 WORKDIR /workspace
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/package.json
@@ -21,7 +21,7 @@ COPY packages ./packages
 ENV DATABASE_URL=mysql://build:build@localhost:3306/build
 RUN npm run db:generate -w apps/api && npm run build -w apps/api
 
-FROM node:22.22-alpine AS production
+FROM node:24-alpine AS production
 ARG APP_VERSION=dev
 ENV NODE_ENV=production APP_VERSION=$APP_VERSION
 WORKDIR /workspace

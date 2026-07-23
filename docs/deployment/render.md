@@ -31,11 +31,20 @@ Render prompts for every variable marked `sync: false`. Use:
 | API        | `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name                                                           |
 | API        | `CLOUDINARY_API_KEY`    | Cloudinary API key                                                              |
 | API        | `CLOUDINARY_API_SECRET` | Cloudinary API secret                                                           |
+| API        | `SMTP_HOST`              | Transactional email provider SMTP host                                          |
+| API        | `SMTP_PORT`              | SMTP port, normally `587`                                                       |
+| API        | `SMTP_USER`              | SMTP username                                                                   |
+| API        | `SMTP_PASSWORD`          | SMTP password or provider API credential                                        |
+| API        | `EMAIL_FROM`             | Verified sender, such as `Swoosh Shop <orders@example.com>`                     |
+| API        | `CONTACT_EMAIL`          | Inbox that receives website contact messages                                    |
 | Storefront | `VITE_API_BASE_URL`     | `https://swoosh-shop-api.onrender.com/api/v1`                                   |
 | Admin      | `VITE_API_BASE_URL`     | `https://swoosh-shop-api.onrender.com/api/v1`                                   |
 
 If Render assigns different service subdomains, replace the example URLs with
 the actual HTTPS URLs, then redeploy both static sites and the API.
+
+The root `package.json` pins Node.js 24.x so Render, CI and the production
+container use the same supported major version.
 
 Do not set `COOKIE_DOMAIN` for separate `onrender.com` services. The API uses a
 host-only, Secure, HttpOnly refresh cookie. Production cookies use
@@ -78,7 +87,12 @@ https://swoosh-shop-admin.onrender.com/login
 ```
 
 Then verify login, refresh the admin page to confirm session restoration, sign
-out, submit a test order, and confirm it in the admin panel.
+out, submit a newsletter subscription and contact message, submit a test order,
+and confirm it in the admin panel. Confirm that the notification outbox sends
+mail through the configured SMTP account.
+
+Immediately after the first login, open **Settings > Security** and replace the
+seeded admin password. Changing it invalidates all existing admin sessions.
 
 ## Free-tier limitations
 

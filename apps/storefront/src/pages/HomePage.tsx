@@ -1,122 +1,115 @@
+import { useEffect, useState } from "react";
 import HeroSection from "@/components/home/HeroSection";
 import CategoryGrid from "@/components/home/CategoryGrid";
 import NewArrivalsRail from "@/components/home/NewArrivalsRail";
 import CampaignBanner from "@/components/home/CampaignBanner";
 import BestsellerGrid from "@/components/home/BestsellerGrid";
 import BrandValues from "@/components/home/BrandValues";
-import TestimonialsSection from "@/components/home/TestimonialsSection";
-import InstagramGallery from "@/components/home/InstagramGallery";
 import NewsletterBanner from "@/components/home/NewsletterBanner";
+import { apiFetchPage } from "@/lib/api";
+import {
+  type CatalogProduct,
+  optionValues,
+  productImage,
+} from "@/lib/catalog";
 
-const mockProducts = [
-  {
-    id: "1",
-    name: "Linen Oversized Shirt",
-    slug: "linen-oversized-shirt",
-    price: 3490,
-    image: "https://picsum.photos/seed/prod-1/600/750",
-    category: "men",
-    badge: "New" as const,
-    colors: ["#F5F0E8", "#C4A882", "#4A4A4A"],
-    newArrival: true,
-  },
-  {
-    id: "2",
-    name: "Cotton Midi Dress",
-    slug: "cotton-midi-dress",
-    price: 4290,
-    salePrice: 3490,
-    image: "https://picsum.photos/seed/prod-2/600/750",
-    category: "women",
-    badge: "Sale" as const,
-    colors: ["#E8D5C4", "#8B6F5E"],
-    newArrival: true,
-  },
-  {
-    id: "3",
-    name: "Slim Chino Trousers",
-    slug: "slim-chino-trousers",
-    price: 2990,
-    image: "https://picsum.photos/seed/prod-3/600/750",
-    category: "men",
-    colors: ["#C4A882", "#4A4A4A", "#2C2C2C"],
-    newArrival: true,
-  },
-  {
-    id: "4",
-    name: "Linen Wide-Leg Pants",
-    slug: "linen-wide-leg-pants",
-    price: 3990,
-    image: "https://picsum.photos/seed/prod-4/600/750",
-    category: "women",
-    badge: "New" as const,
-    colors: ["#F5F0E8", "#D4C5B0"],
-    newArrival: true,
-  },
-  {
-    id: "5",
-    name: "Classic Polo",
-    slug: "classic-polo",
-    price: 1490,
-    image: "https://picsum.photos/seed/prod-5/600/750",
-    category: "men",
-    colors: ["#FFFFFF", "#4A4A4A", "#1A3A5C"],
-    newArrival: false,
-  },
-  {
-    id: "6",
-    name: "Structured Blazer",
-    slug: "structured-blazer",
-    price: 5990,
-    image: "https://picsum.photos/seed/prod-6/600/750",
-    category: "men",
-    colors: ["#2C2C2C", "#4A4A4A"],
-    newArrival: false,
-  },
-  {
-    id: "7",
-    name: "Relaxed Linen Tee",
-    slug: "relaxed-linen-tee",
-    price: 1990,
-    salePrice: 1490,
-    image: "https://picsum.photos/seed/prod-7/600/750",
-    category: "women",
-    badge: "Sale" as const,
-    colors: ["#F5F0E8", "#E8D5C4", "#C4A882"],
-    newArrival: false,
-  },
-  {
-    id: "8",
-    name: "Pleated Midi Skirt",
-    slug: "pleated-midi-skirt",
-    price: 2490,
-    image: "https://picsum.photos/seed/prod-8/600/750",
-    category: "women",
-    colors: ["#2C2C2C", "#8B6F5E"],
-    newArrival: false,
-  },
-];
+interface HomeCard {
+  id: string;
+  name: string;
+  slug: string;
+  price: number;
+  salePrice?: number;
+  image: string;
+  category: string;
+  badge?: "Sale" | "New";
+  colors?: string[];
+}
 
-const newArrivals = mockProducts
-  .filter((p) => p.newArrival)
-  .map(({ newArrival: _, ...p }) => p);
-
-const bestsellers = mockProducts.map(({ newArrival: _, ...p }) => ({
-  ...p,
-  colors: p.colors,
-}));
+function toCard(product: CatalogProduct): HomeCard {
+  const lowest = [...product.variants].sort(
+    (a, b) => Number(a.price) - Number(b.price),
+  )[0];
+  const activePrice = Number(lowest?.price ?? product.priceFrom);
+  const regularPrice = Number(lowest?.regularPrice ?? product.priceFrom);
+  return {
+    id: product.id,
+    name: product.name,
+    slug: product.slug,
+    price: regularPrice,
+    ...(activePrice < regularPrice ? { salePrice: activePrice } : {}),
+    image: productImage(product),
+    category: product.category?.name ?? "Swoosh",
+    badge:
+      activePrice < regularPrice
+        ? "Sale"
+        : product.isNewArrival
+          ? "New"
+          : undefined,
+    colors: optionValues(product, "Color").map(
+      (option) => option.metadata?.hex ?? "#d8d2ca",
+    ),
+  };
+}
 
 export default function HomePage() {
+  const [newArrivals, setNewArrivals] = useState<HomeCard[]>([]);
+  const [featured, setFeatured] = useState<HomeCard[]>([]);
+  const [catalog, setCatalog] = useState<CatalogProduct[]>([]);
+
+  useEffect(() => {
+    Promise.all([
+      apiFetchPage<CatalogProduct>(
+        "/products?page=1&pageSize=8&newArrival=true&sort=newest",
+      ),
+      apiFetchPage<CatalogProduct>(
+        "/products?page=1&pageSize=8&featured=true&sort=popular",
+      ),
+      apiFetchPage<CatalogProduct>("/products?page=1&pageSize=24&sort=newest"),
+    ])
+      .then(([newResult, featuredResult, catalogResult]) => {
+        setNewArrivals(newResult.items.map(toCard));
+        setFeatured(featuredResult.items.map(toCard));
+        setCatalog(catalogResult.items);
+      })
+      .catch(() => {
+        setNewArrivals([]);
+        setFeatured([]);
+        setCatalog([]);
+      });
+  }, []);
+
+  const categoryCards = Array.from(
+    new Map(
+      catalog
+        .filter((product) => product.category)
+        .map((product) => [
+          product.category!.slug,
+          {
+            id: product.category!.slug,
+            name: product.category!.name,
+            slug: product.category!.slug,
+            image: productImage(product),
+          },
+        ]),
+    ).values(),
+  );
+  const heroImage =
+    featured[0]?.image ??
+    newArrivals[0]?.image ??
+    (catalog[0] ? productImage(catalog[0]) : "");
+  const campaignImage =
+    featured[1]?.image ??
+    newArrivals[1]?.image ??
+    (catalog[1] ? productImage(catalog[1]) : "");
+
   return (
     <main>
-      <HeroSection />
-      <CategoryGrid />
+      <HeroSection image={heroImage} />
+      <CategoryGrid categories={categoryCards} />
       <NewArrivalsRail products={newArrivals} />
-      <CampaignBanner />
-      <BestsellerGrid products={bestsellers} />
+      <CampaignBanner image={campaignImage} />
+      <BestsellerGrid products={featured} />
       <BrandValues />
-      <TestimonialsSection />
-      <InstagramGallery />
       <NewsletterBanner />
     </main>
   );

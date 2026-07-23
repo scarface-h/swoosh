@@ -9,3 +9,15 @@ docker compose up --build
 ```
 
 The Compose stack starts MySQL 8.4, Redis, a one-shot migration job, the API and TLS-enabled Nginx. It generates a short-lived self-signed localhost certificate; production must supply a managed certificate. Direct API development can use `npm run dev:api`.
+
+Run the complete repository quality gate before deployment:
+
+```bash
+npm run verify
+npm audit --audit-level=high
+```
+
+Production deployment requires TiDB, Cloudinary and SMTP credentials. Never
+commit `.env` files or paste secrets into source control. After the first
+deployment, change the seeded admin password from **Admin > Settings >
+Security**.

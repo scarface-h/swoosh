@@ -1,6 +1,9 @@
 # Swoosh API
 
-Node.js/TypeScript/Express API backed by MySQL 8.4 and Prisma. It owns authentication, catalogue, variant inventory, cart, pricing, checkout, orders, admin RBAC, uploads and audit history.
+Node.js/TypeScript/Express API backed by MySQL 8.4/TiDB and Prisma. It owns
+authentication, catalogue, variant inventory, cart, pricing, checkout, orders,
+admin RBAC, uploads, public contact/newsletter submissions, durable email
+notifications and audit history.
 
 ## Local commands
 
@@ -25,6 +28,21 @@ npm run build -w apps/api
 ```
 
 Production uses `npm run db:deploy` rather than `db push` or a destructive reset.
+Prisma configuration lives in `apps/api/prisma.config.ts`.
+
+## Email delivery
+
+Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`,
+`EMAIL_FROM`, and `CONTACT_EMAIL`. The API persists messages to a notification
+outbox before returning and a background worker delivers them with retries.
+Without SMTP configuration, requests remain safe but pending notifications
+cannot be sent.
+
+## First admin login
+
+The seed creates the initial administrator. On the first production login, use
+**Admin > Settings > Security** to replace the temporary password. Password
+changes revoke every existing refresh token and session.
 
 ## TiDB Cloud
 

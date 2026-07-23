@@ -1,10 +1,11 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { CheckCircle, Loader2 } from "lucide-react";
-import { useCartStore } from "@/stores/cartStore";
+import { AlertCircle, CheckCircle, Loader2 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { formatCurrency } from "@swoosh/utilities";
+import { apiFetch, ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useCartStore } from "@/stores/cartStore";
 
 const DIVISIONS = [
   "Dhaka",
@@ -17,7 +18,7 @@ const DIVISIONS = [
   "Mymensingh",
 ] as const;
 
-interface FormData {
+interface CheckoutForm {
   name: string;
   phone: string;
   email: string;
@@ -28,34 +29,96 @@ interface FormData {
   notes: string;
 }
 
-interface FormErrors {
-  [key: string]: string;
+interface Pricing {
+  subtotal: string;
+  productDiscount: string;
+  couponDiscount: string;
+  deliveryCharge: string;
+  grandTotal: string;
 }
 
+interface PreviewResponse {
+  pricing: Pricing;
+  warnings: Array<{ code: string; message: string }>;
+}
+
+interface OrderResponse {
+  orderNumber: string;
+  trackingToken: string;
+  status: string;
+  grandTotal: string;
+}
+
+const initialForm: CheckoutForm = {
+  name: "",
+  phone: "",
+  email: "",
+  division: "",
+  district: "",
+  area: "",
+  address: "",
+  notes: "",
+};
+
 export default function CheckoutPage() {
-  const items = useCartStore((s) => s.items);
-  const subtotalFn = useCartStore((s) => s.subtotal);
-  const subtotal = subtotalFn();
-  const navigate = useNavigate();
+  const items = useCartStore((state) => state.items);
+  const clearCart = useCartStore((state) => state.clearCart);
+  const [form, setForm] = useState(initialForm);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [pricing, setPricing] = useState<Pricing | null>(null);
+  const [warnings, setWarnings] = useState<string[]>([]);
+  const [previewing, setPreviewing] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [requestError, setRequestError] = useState("");
+  const [order, setOrder] = useState<OrderResponse | null>(null);
+  const idempotencyKey = useRef<string | null>(null);
 
-  const [form, setForm] = useState<FormData>({
-    name: "",
-    phone: "",
-    email: "",
-    division: "",
-    district: "",
-    area: "",
-    address: "",
-    notes: "",
-  });
-  const [errors, setErrors] = useState<FormErrors>({});
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
-  const [orderNumber, setOrderNumber] = useState("");
+  const deliveryZone =
+    form.division === "Dhaka" ? "DHAKA_INSIDE" : "OUTSIDE_DHAKA";
+  const lines = items.map((item) => ({
+    variantId: item.variantId,
+    quantity: item.quantity,
+    expectedUnitPrice: item.unitPrice.toFixed(2),
+  }));
 
-  if (!items.length && !isSuccess) {
+  useEffect(() => {
+    if (!form.division || lines.length === 0) {
+      setPricing(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    setPreviewing(true);
+    setRequestError("");
+    apiFetch<PreviewResponse>("/checkout/preview", {
+      method: "POST",
+      signal: controller.signal,
+      body: { items: lines, deliveryZone },
+    })
+      .then((result) => {
+        setPricing(result.pricing);
+        setWarnings(result.warnings.map((warning) => warning.message));
+      })
+      .catch((error) => {
+        if (error instanceof DOMException && error.name === "AbortError")
+          return;
+        setPricing(null);
+        setRequestError(
+          error instanceof ApiError
+            ? error.message
+            : "Unable to calculate the order total.",
+        );
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setPreviewing(false);
+      });
+
+    return () => controller.abort();
+  }, [form.division, JSON.stringify(lines), deliveryZone]);
+
+  if (!items.length && !order) {
     return (
-      <div className="pt-24 sm:pt-32 pb-20 px-4 flex flex-col items-center justify-center min-h-[60vh] gap-6">
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6 px-4 pb-20 pt-24">
         <p className="font-serif text-2xl">Your cart is empty</p>
         <Link to="/shop" className="text-sm underline underline-offset-4">
           Continue Shopping
@@ -64,71 +127,104 @@ export default function CheckoutPage() {
     );
   }
 
-  const delivery = form.division === "Dhaka" ? 100 : 150;
-  const total = subtotal + (form.division ? delivery : 0);
+  const update = (
+    event: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
+  ) => {
+    const { name, value } = event.target;
+    setForm((current) => ({ ...current, [name]: value }));
+    setErrors((current) => ({ ...current, [name]: "" }));
+    setRequestError("");
+    idempotencyKey.current = null;
+  };
 
-  function handleChange(
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) {
-      setErrors((prev) => {
-        const next = { ...prev };
-        delete next[name];
-        return next;
-      });
+  const validate = () => {
+    const next: Record<string, string> = {};
+    if (!form.name.trim()) next.name = "Full name is required.";
+    if (!/^[+0-9][0-9 -]{5,19}$/.test(form.phone.trim())) {
+      next.phone = "Enter a valid phone number.";
     }
-  }
+    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      next.email = "Enter a valid email address.";
+    }
+    if (!form.division) next.division = "Division is required.";
+    if (!form.district.trim()) next.district = "District is required.";
+    if (!form.area.trim()) next.area = "Area is required.";
+    if (!form.address.trim()) next.address = "Complete address is required.";
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  };
 
-  function validate(): boolean {
-    const newErrors: FormErrors = {};
-    if (!form.name.trim()) newErrors.name = "Full name is required";
-    if (!form.phone.trim()) newErrors.phone = "Phone number is required";
-    if (!form.division) newErrors.division = "Division is required";
-    if (!form.district.trim()) newErrors.district = "District is required";
-    if (!form.area.trim()) newErrors.area = "Area is required";
-    if (!form.address.trim()) newErrors.address = "Address is required";
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  }
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!validate() || !pricing || submitting) return;
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!validate()) return;
-    setIsLoading(true);
-    setTimeout(() => {
-      const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-      let code = "";
-      for (let i = 0; i < 6; i++) {
-        code += chars.charAt(Math.floor(Math.random() * chars.length));
+    setSubmitting(true);
+    setRequestError("");
+    idempotencyKey.current ??= crypto.randomUUID();
+
+    try {
+      const created = await apiFetch<OrderResponse>("/orders", {
+        method: "POST",
+        headers: { "Idempotency-Key": idempotencyKey.current },
+        body: {
+          customer: {
+            name: form.name.trim(),
+            phone: form.phone.trim(),
+            ...(form.email.trim() ? { email: form.email.trim() } : {}),
+          },
+          delivery: {
+            division: form.division,
+            district: form.district.trim(),
+            area: form.area.trim(),
+            addressLine: form.address.trim(),
+            deliveryZone,
+            ...(form.notes.trim() ? { instructions: form.notes.trim() } : {}),
+          },
+          items: lines,
+          clientGrandTotal: Number(pricing.grandTotal),
+        },
+      });
+      setOrder(created);
+      clearCart();
+    } catch (error) {
+      setRequestError(
+        error instanceof ApiError
+          ? error.message
+          : "Unable to place the order. Please try again.",
+      );
+      if (error instanceof ApiError && error.code !== "IDEMPOTENCY_CONFLICT") {
+        idempotencyKey.current = null;
       }
-      setOrderNumber(`SW-2025-${code}`);
-      setIsLoading(false);
-      setIsSuccess(true);
-    }, 1500);
-  }
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-  if (isSuccess) {
+  if (order) {
     return (
-      <div className="pt-24 sm:pt-32 pb-20 flex flex-col items-center justify-center min-h-[60vh] gap-6 text-center px-4 sm:px-6">
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: "spring", duration: 0.5 }}
-        >
-          <CheckCircle size={72} className="text-green-600" />
+      <div className="flex min-h-[65vh] flex-col items-center justify-center gap-5 px-4 pb-20 pt-24 text-center">
+        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
+          <CheckCircle size={64} className="text-success" />
         </motion.div>
-        <h1 className="font-serif text-3xl">Order Confirmed!</h1>
-        <p className="text-muted">Order number: {orderNumber}</p>
-        <p className="text-sm text-muted max-w-md">
-          This is a demonstration. No real order has been placed.
+        <h1 className="font-serif text-3xl">Order confirmed</h1>
+        <p className="text-muted">
+          Order number:{" "}
+          <strong className="text-ink">{order.orderNumber}</strong>
+        </p>
+        <p className="text-sm text-muted">
+          Total: {formatCurrency(Number(order.grandTotal))} · Cash on delivery
+        </p>
+        <p className="max-w-md text-sm text-muted">
+          Keep your order number safe. We’ll contact you using the phone number
+          supplied at checkout.
         </p>
         <Link
           to="/"
-          className="mt-4 flex min-h-12 items-center bg-ink text-light px-8 py-3 text-sm uppercase tracking-widest hover:bg-dark transition-colors"
+          className="mt-3 flex min-h-12 items-center bg-ink px-8 text-sm uppercase tracking-widest text-light"
         >
-          Return to Home
+          Return home
         </Link>
       </div>
     );
@@ -136,210 +232,232 @@ export default function CheckoutPage() {
 
   const inputClass = (field: string) =>
     cn(
-      "w-full border bg-transparent px-4 py-3 text-sm outline-none transition-colors",
-      errors[field] ? "border-error" : "border-line focus:border-ink"
+      "min-h-12 w-full border bg-transparent px-4 text-sm outline-none",
+      errors[field] ? "border-error" : "border-line focus:border-ink",
     );
 
   return (
-    <div className="pt-24 sm:pt-32 pb-16 sm:pb-20 max-w-[1440px] mx-auto px-4 sm:px-6">
-      <h1 className="font-serif text-3xl sm:text-4xl mb-7 sm:mb-10">Checkout</h1>
+    <div className="mx-auto max-w-[1440px] px-4 pb-16 pt-24 sm:px-6 sm:pb-20 sm:pt-32">
+      <h1 className="mb-8 font-serif text-3xl sm:text-4xl">Checkout</h1>
 
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-8 lg:grid-cols-5 lg:gap-12">
-        <div className="lg:col-span-3">
-          <p className="text-sm uppercase tracking-widest mb-6">Shipping Information</p>
+      {requestError && (
+        <div
+          className="mb-6 flex items-start gap-3 border border-error/30 bg-error/5 p-4 text-sm text-error"
+          role="alert"
+        >
+          <AlertCircle size={18} className="mt-0.5 shrink-0" />
+          {requestError}
+        </div>
+      )}
 
-          <div className="space-y-5">
-            <div>
-              <label className="block text-xs uppercase tracking-wider text-[#6B6560] mb-1.5">
-                Full Name *
-              </label>
+      <form
+        onSubmit={submit}
+        className="grid grid-cols-1 gap-8 lg:grid-cols-5 lg:gap-12"
+      >
+        <div className="space-y-5 lg:col-span-3">
+          <p className="text-sm uppercase tracking-widest">
+            Shipping information
+          </p>
+          {[
+            ["name", "Full name", "text"],
+            ["phone", "Phone number", "tel"],
+            ["email", "Email (optional)", "email"],
+          ].map(([name, label, type]) => (
+            <label key={name}>
+              <span className="mb-1.5 block text-xs uppercase tracking-wider text-muted">
+                {label}
+              </span>
               <input
-                type="text"
-                name="name"
-                value={form.name}
-                onChange={handleChange}
-                className={inputClass("name")}
+                name={name}
+                type={type}
+                value={form[name as keyof CheckoutForm]}
+                onChange={update}
+                className={inputClass(name)}
+                autoComplete={
+                  name === "name" ? "name" : name === "phone" ? "tel" : "email"
+                }
               />
-              {errors.name && <p className="text-xs text-[#B83232] mt-1">{errors.name}</p>}
-            </div>
-
-            <div>
-              <label className="block text-xs uppercase tracking-wider text-[#6B6560] mb-1.5">
-                Phone Number *
-              </label>
-              <input
-                type="tel"
-                name="phone"
-                value={form.phone}
-                onChange={handleChange}
-                className={inputClass("phone")}
-              />
-              {errors.phone && <p className="text-xs text-[#B83232] mt-1">{errors.phone}</p>}
-            </div>
-
-            <div>
-              <label className="block text-xs uppercase tracking-wider text-[#6B6560] mb-1.5">
-                Email (optional)
-              </label>
-              <input
-                type="email"
-                name="email"
-                value={form.email}
-                onChange={handleChange}
-                className={inputClass("email")}
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs uppercase tracking-wider text-[#6B6560] mb-1.5">
-                Division *
-              </label>
-              <select
-                name="division"
-                value={form.division}
-                onChange={handleChange}
-                className={inputClass("division")}
-              >
-                <option value="">Select Division</option>
-                {DIVISIONS.map((d) => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                ))}
-              </select>
-              {errors.division && (
-                <p className="text-xs text-[#B83232] mt-1">{errors.division}</p>
+              {errors[name] && (
+                <span className="mt-1 block text-xs text-error">
+                  {errors[name]}
+                </span>
               )}
-            </div>
+            </label>
+          ))}
 
-            <div>
-              <label className="block text-xs uppercase tracking-wider text-[#6B6560] mb-1.5">
-                District *
-              </label>
+          <label>
+            <span className="mb-1.5 block text-xs uppercase tracking-wider text-muted">
+              Division
+            </span>
+            <select
+              name="division"
+              value={form.division}
+              onChange={update}
+              className={inputClass("division")}
+            >
+              <option value="">Select division</option>
+              {DIVISIONS.map((division) => (
+                <option key={division}>{division}</option>
+              ))}
+            </select>
+            {errors.division && (
+              <span className="mt-1 block text-xs text-error">
+                {errors.division}
+              </span>
+            )}
+          </label>
+
+          {[
+            ["district", "District"],
+            ["area", "Area"],
+          ].map(([name, label]) => (
+            <label key={name}>
+              <span className="mb-1.5 block text-xs uppercase tracking-wider text-muted">
+                {label}
+              </span>
               <input
-                type="text"
-                name="district"
-                value={form.district}
-                onChange={handleChange}
-                className={inputClass("district")}
+                name={name}
+                value={form[name as keyof CheckoutForm]}
+                onChange={update}
+                className={inputClass(name)}
               />
-              {errors.district && (
-                <p className="text-xs text-[#B83232] mt-1">{errors.district}</p>
+              {errors[name] && (
+                <span className="mt-1 block text-xs text-error">
+                  {errors[name]}
+                </span>
               )}
-            </div>
+            </label>
+          ))}
 
-            <div>
-              <label className="block text-xs uppercase tracking-wider text-[#6B6560] mb-1.5">
-                Area *
-              </label>
-              <input
-                type="text"
-                name="area"
-                value={form.area}
-                onChange={handleChange}
-                className={inputClass("area")}
-              />
-              {errors.area && <p className="text-xs text-[#B83232] mt-1">{errors.area}</p>}
-            </div>
+          <label>
+            <span className="mb-1.5 block text-xs uppercase tracking-wider text-muted">
+              Complete address
+            </span>
+            <textarea
+              name="address"
+              rows={3}
+              value={form.address}
+              onChange={update}
+              className={cn(inputClass("address"), "py-3")}
+            />
+            {errors.address && (
+              <span className="mt-1 block text-xs text-error">
+                {errors.address}
+              </span>
+            )}
+          </label>
 
-            <div>
-              <label className="block text-xs uppercase tracking-wider text-[#6B6560] mb-1.5">
-                Complete Address *
-              </label>
-              <textarea
-                name="address"
-                rows={3}
-                value={form.address}
-                onChange={handleChange}
-                className={inputClass("address")}
-              />
-              {errors.address && (
-                <p className="text-xs text-[#B83232] mt-1">{errors.address}</p>
-              )}
-            </div>
+          <label>
+            <span className="mb-1.5 block text-xs uppercase tracking-wider text-muted">
+              Delivery instructions (optional)
+            </span>
+            <textarea
+              name="notes"
+              rows={2}
+              maxLength={500}
+              value={form.notes}
+              onChange={update}
+              className={cn(inputClass("notes"), "py-3")}
+            />
+          </label>
 
-            <div>
-              <label className="block text-xs uppercase tracking-wider text-[#6B6560] mb-1.5">
-                Order Notes (optional)
-              </label>
-              <textarea
-                name="notes"
-                rows={2}
-                value={form.notes}
-                onChange={handleChange}
-                className={inputClass("notes")}
-              />
-            </div>
-          </div>
-
-          <div className="mt-8">
-            <p className="text-sm uppercase tracking-widest mb-4">Payment Method</p>
-            <label className="flex items-center gap-3 border border-[#DDD8D0] p-4 cursor-pointer">
-              <input type="radio" name="payment" defaultChecked className="accent-[#1A1A1A]" />
+          <div>
+            <p className="mb-4 text-sm uppercase tracking-widest">
+              Payment method
+            </p>
+            <div className="flex min-h-14 items-center gap-3 border border-line p-4">
+              <input type="radio" checked readOnly className="accent-ink" />
               <span className="text-sm">Cash on Delivery</span>
-              <span className="ml-auto text-xs bg-[#F5F0E8] px-2 py-0.5 uppercase tracking-wider text-[#6B6560]">
+              <span className="ml-auto bg-background px-2 py-1 text-xs text-muted">
                 COD
               </span>
-            </label>
+            </div>
           </div>
         </div>
 
         <div className="lg:col-span-2">
-          <div className="border border-line bg-surface p-5 sm:p-8 lg:sticky lg:top-32">
-            <p className="text-sm uppercase tracking-widest mb-6">Order Summary</p>
-            <div className="space-y-3 mb-4">
+          <div className="border border-line bg-surface p-5 sm:p-7 lg:sticky lg:top-28">
+            <p className="mb-6 text-sm uppercase tracking-widest">
+              Order summary
+            </p>
+            <div className="mb-5 space-y-4">
               {items.map((item) => (
-                <div key={item.id} className="flex gap-3">
-                  <div className="w-[60px] h-[75px] bg-background flex-shrink-0">
+                <div key={item.variantId} className="flex gap-3">
+                  <div className="h-[75px] w-[60px] shrink-0 overflow-hidden bg-background">
                     {item.imageUrl && (
                       <img
                         src={item.imageUrl}
                         alt={item.productName}
-                        className="w-full h-full object-cover"
+                        className="h-full w-full object-cover"
                       />
                     )}
                   </div>
-                  <div className="flex-1 flex flex-col justify-between text-sm">
-                    <p className="line-clamp-1">{item.productName}</p>
-                    <div className="flex justify-between text-muted">
+                  <div className="min-w-0 flex-1 text-sm">
+                    <p className="truncate">{item.productName}</p>
+                    <p className="mt-1 text-xs text-muted">
+                      {[item.colorName, item.sizeName]
+                        .filter(Boolean)
+                        .join(" / ")}
+                    </p>
+                    <div className="mt-2 flex justify-between text-muted">
                       <span>Qty: {item.quantity}</span>
-                      <span>{formatCurrency(item.unitPrice * item.quantity)}</span>
+                      <span>
+                        {formatCurrency(item.unitPrice * item.quantity)}
+                      </span>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
-            <div className="border-t border-line pt-4 space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span>Subtotal</span>
-                <span>{formatCurrency(subtotal)}</span>
+
+            {previewing ? (
+              <div className="flex min-h-24 items-center justify-center gap-2 border-t border-line text-sm text-muted">
+                <Loader2 size={16} className="animate-spin" /> Calculating…
               </div>
-              <div className="flex justify-between text-muted">
-                <span>Delivery</span>
-                <span>
-                  {form.division
-                    ? formatCurrency(delivery)
-                    : "Select division"}
-                </span>
+            ) : pricing ? (
+              <div className="space-y-2 border-t border-line pt-4 text-sm">
+                <div className="flex justify-between">
+                  <span>Subtotal</span>
+                  <span>{formatCurrency(Number(pricing.subtotal))}</span>
+                </div>
+                {Number(pricing.couponDiscount) > 0 && (
+                  <div className="flex justify-between text-success">
+                    <span>Discount</span>
+                    <span>
+                      -{formatCurrency(Number(pricing.couponDiscount))}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between text-muted">
+                  <span>Delivery</span>
+                  <span>{formatCurrency(Number(pricing.deliveryCharge))}</span>
+                </div>
+                <div className="mt-3 flex justify-between border-t border-line pt-3 text-base font-semibold">
+                  <span>Total</span>
+                  <span>{formatCurrency(Number(pricing.grandTotal))}</span>
+                </div>
               </div>
-            </div>
-            <div className="border-t border-line mt-3 pt-3 flex justify-between font-semibold text-base">
-              <span>Total</span>
-              <span>{formatCurrency(total)}</span>
-            </div>
+            ) : (
+              <p className="border-t border-line py-4 text-sm text-muted">
+                Select a division to calculate the authoritative total.
+              </p>
+            )}
+
+            {warnings.length > 0 && (
+              <ul className="mt-4 space-y-1 text-xs text-warning">
+                {warnings.map((warning) => (
+                  <li key={warning}>{warning}</li>
+                ))}
+              </ul>
+            )}
+
             <button
               type="submit"
-              disabled={isLoading}
-              className="mt-6 min-h-12 w-full bg-ink text-light py-4 text-sm uppercase tracking-widest hover:bg-dark transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              disabled={submitting || previewing || !pricing}
+              className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 bg-ink px-4 text-sm font-medium uppercase tracking-widest text-light disabled:opacity-50"
             >
-              {isLoading ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                "Place Order"
-              )}
+              {submitting && <Loader2 size={16} className="animate-spin" />}
+              {submitting ? "Placing order…" : "Place order"}
             </button>
           </div>
         </div>

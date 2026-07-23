@@ -2,22 +2,39 @@ import { useState } from "react";
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
 import { ArrowRight } from "lucide-react";
+import { apiFetch, ApiError } from "@/lib/api";
 
 export default function NewsletterBanner() {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: "-100px" });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setError("Please enter a valid email address.");
       return;
     }
     setError("");
-    setSubmitted(true);
+    setSubmitting(true);
+    try {
+      await apiFetch("/newsletter", {
+        method: "POST",
+        body: { email: email.trim() },
+      });
+      setSubmitted(true);
+    } catch (caught) {
+      setError(
+        caught instanceof ApiError
+          ? caught.message
+          : "Unable to subscribe right now.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -46,9 +63,14 @@ export default function NewsletterBanner() {
           transition={{ duration: 0.5, delay: 0.3 }}
         >
           {submitted ? (
-            <p className="text-light text-sm tracking-widest uppercase">You're on the list.</p>
+            <p className="text-light text-sm tracking-widest uppercase">
+              You're on the list.
+            </p>
           ) : (
-            <form onSubmit={handleSubmit} className="flex flex-col items-center gap-2">
+            <form
+              onSubmit={handleSubmit}
+              className="flex flex-col items-center gap-2"
+            >
               <div className="flex w-full max-w-md border-b border-light/40 focus-within:border-light transition-colors">
                 <input
                   type="email"
@@ -59,6 +81,7 @@ export default function NewsletterBanner() {
                 />
                 <button
                   type="submit"
+                  disabled={submitting}
                   className="text-light hover:text-light/70 transition-colors pl-4 py-3"
                   aria-label="Subscribe"
                 >

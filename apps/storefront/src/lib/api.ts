@@ -1,44 +1,114 @@
-const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? "/api/v1").replace(/\/$/, "");
+const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? "/api/v1").replace(
+  /\/$/,
+  "",
+);
 
-type RequestOptions = {
-  method?: string;
+interface ApiEnvelope<T> {
+  success: boolean;
+  data: T;
+  meta?: {
+    page?: number;
+    pageSize?: number;
+    total?: number;
+    totalPages?: number;
+  };
+  error?: {
+    code?: string;
+    message?: string;
+    fields?: Record<string, string[]>;
+  };
+}
+
+export interface RequestOptions {
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
   headers?: Record<string, string>;
-};
+  signal?: AbortSignal;
+}
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string, public errors?: Record<string, string[]>) {
+  constructor(
+    public readonly status: number,
+    message: string,
+    public readonly code = "REQUEST_FAILED",
+    public readonly fields?: Record<string, string[]>,
+  ) {
     super(message);
+    this.name = "ApiError";
   }
 }
 
-export async function apiFetch<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
-  const { method = "GET", body, headers = {} } = options;
+let accessToken: string | null = null;
 
-  const token = localStorage.getItem("accessToken");
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
+export function setAccessToken(token: string | null) {
+  accessToken = token;
+}
+
+async function request<T>(
+  endpoint: string,
+  options: RequestOptions = {},
+): Promise<ApiEnvelope<T>> {
+  const { method = "GET", body, headers = {}, signal } = options;
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_BASE}${endpoint}`, {
+      method,
+      credentials: "include",
+      signal,
+      headers: {
+        ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        ...headers,
+      },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError")
+      throw error;
+    throw new ApiError(0, "Unable to reach the shop service.");
   }
 
-  const res = await fetch(`${API_BASE}${endpoint}`, {
-    method,
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...headers,
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  const text = await response.text();
+  let payload: ApiEnvelope<T> | null = null;
+  if (text) {
+    try {
+      payload = JSON.parse(text) as ApiEnvelope<T>;
+    } catch {
+      throw new ApiError(
+        response.status,
+        "The server returned an invalid response.",
+      );
+    }
+  }
 
-  const data = await res.json();
-
-  if (!res.ok) {
+  if (!response.ok || !payload?.success) {
     throw new ApiError(
-      res.status,
-      data.error?.message || "Request failed",
-      data.error?.fields,
+      response.status,
+      payload?.error?.message ?? "Request failed. Please try again.",
+      payload?.error?.code,
+      payload?.error?.fields,
     );
   }
 
-  return data.data;
+  return payload;
+}
+
+export async function apiFetch<T>(
+  endpoint: string,
+  options: RequestOptions = {},
+): Promise<T> {
+  return (await request<T>(endpoint, options)).data;
+}
+
+export async function apiFetchPage<T>(
+  endpoint: string,
+  options: RequestOptions = {},
+) {
+  const payload = await request<T[]>(endpoint, options);
+  return {
+    items: payload.data,
+    total: payload.meta?.total ?? payload.data.length,
+    totalPages: payload.meta?.totalPages ?? 1,
+  };
 }

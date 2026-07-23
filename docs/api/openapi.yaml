@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  title: Swoosh Commerce API
+  title: Swoosh Shop API
   version: 1.0.0
   description: Production REST contract. Runtime Swagger UI is available at /api-docs.
 servers:
@@ -83,9 +83,12 @@ paths:
   /products/{productId}/reviews: { parameters: [{ in: path, name: productId, required: true, schema: { type: string } }], get: { security: [], summary: Approved reviews, responses: { '200': { description: OK } } }, post: { summary: Create verified review, responses: { '201': { description: Created } } } }
   /homepage: { get: { security: [], summary: Homepage content, responses: { '200': { description: OK } } } }
   /settings/public: { get: { security: [], summary: Public settings, responses: { '200': { description: OK } } } }
+  /newsletter: { post: { security: [], summary: Subscribe an email address to the newsletter, responses: { '201': { description: Subscribed }, '200': { description: Already subscribed } } } }
+  /contact: { post: { security: [], summary: Submit a contact request and queue an email notification, responses: { '201': { description: Submitted } } } }
   /admin/auth/login: { post: { security: [], summary: Admin login, responses: { '200': { description: OK } } } }
   /admin/auth/refresh: { post: { security: [{ refreshCookie: [] }], summary: Admin refresh, responses: { '200': { description: OK } } } }
   /admin/auth/logout: { post: { security: [{ refreshCookie: [] }], summary: Admin logout, responses: { '200': { description: OK } } } }
+  /admin/auth/change-password: { post: { summary: Change password and revoke all admin sessions, responses: { '200': { description: Password changed } } } }
   /admin/dashboard: { get: { summary: Dashboard metrics, responses: { '200': { description: OK } } } }
   /admin/products: { get: { summary: Admin products, responses: { '200': { description: OK } } }, post: { summary: Create product, responses: { '201': { description: Created } } } }
   /admin/products/{id}: { parameters: [{ in: path, name: id, required: true, schema: { type: string } }], get: { summary: Product editor detail, responses: { '200': { description: OK } } }, patch: { summary: Update product, responses: { '200': { description: OK } } } }

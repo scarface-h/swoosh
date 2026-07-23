@@ -16,6 +16,7 @@ export interface ProductListQuery {
   featured?: boolean;
   newArrival?: boolean;
   search?: string;
+  ids?: string[];
   sort?: 'newest' | 'price_asc' | 'price_desc' | 'popular' | 'discount';
 }
 
@@ -83,6 +84,7 @@ const variantInclude = {
 
 export async function listProducts(q: ProductListQuery) {
   const where: any = { status: 'ACTIVE', archivedAt: null };
+  if (q.ids?.length) where.id = { in: q.ids };
   if (q.category) where.category = { slug: q.category };
   if (q.collection) where.collections = { some: { collection: { slug: q.collection } } };
   if (q.featured) where.isFeatured = true;

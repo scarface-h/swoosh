@@ -20,6 +20,11 @@ const listQuery = z.object({
   featured: z.coerce.boolean().optional(),
   newArrival: z.coerce.boolean().optional(),
   search: z.string().optional(),
+  ids: z
+    .string()
+    .transform((value) => value.split(",").filter(Boolean))
+    .pipe(z.array(z.string().min(1)).max(60))
+    .optional(),
   sort: z.enum(['newest', 'price_asc', 'price_desc', 'popular', 'discount']).optional(),
 });
 

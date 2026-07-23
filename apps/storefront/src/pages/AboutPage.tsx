@@ -25,14 +25,10 @@ function Section({ children, className }: { children: React.ReactNode; className
 export default function AboutPage() {
   return (
     <main>
-      {/* Hero */}
-      <div className="relative min-h-[68svh] md:min-h-[60vh] flex items-end">
-        <img
-          src="https://picsum.photos/seed/swoosh-about/1600/700"
-          alt="SWOOSH studio"
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-black/55" />
+      <div className="relative flex min-h-[68svh] items-end overflow-hidden bg-[radial-gradient(circle_at_70%_30%,#a88d75_0%,#46382e_38%,#171412_100%)] md:min-h-[60vh]">
+        <div className="absolute -right-16 top-12 h-72 w-72 rounded-full border border-white/20 sm:h-96 sm:w-96" />
+        <div className="absolute right-20 top-40 h-48 w-48 rounded-full border border-white/10 sm:h-64 sm:w-64" />
+        <div className="absolute inset-0 bg-black/20" />
         <div className="relative z-10 pb-10 sm:pb-16 px-4 sm:px-6 max-w-[1440px] mx-auto w-full">
           <h1 className="font-serif text-5xl sm:text-6xl md:text-8xl text-white">Our Story</h1>
         </div>
@@ -53,11 +49,11 @@ export default function AboutPage() {
 
       {/* Split: founder + philosophy */}
       <Section className="py-12 sm:py-20 max-w-[1440px] mx-auto px-4 sm:px-6 grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center">
-        <img
-          src="https://picsum.photos/seed/swoosh-founder/800/1000"
-          alt="Design studio"
-          className="aspect-[4/5] object-cover w-full"
-        />
+        <div className="grid aspect-[4/5] w-full place-items-center overflow-hidden bg-[linear-gradient(145deg,#d9c6b3,#6e5949)] px-8 text-center">
+          <span className="font-serif text-4xl tracking-[0.22em] text-white/90 sm:text-6xl">
+            FORM · CRAFT · PURPOSE
+          </span>
+        </div>
         <div>
           <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl text-[#1A1A1A]">Design Philosophy</h2>
           <p className="mt-6 text-[#6B6560] leading-relaxed">
@@ -98,13 +94,8 @@ export default function AboutPage() {
         </div>
       </Section>
 
-      {/* Full-width image */}
       <Section>
-        <img
-          src="https://picsum.photos/seed/swoosh-studio/1600/600"
-          alt="SWOOSH studio"
-          className="w-full aspect-[21/9] object-cover"
-        />
+        <div className="aspect-[21/9] w-full bg-[linear-gradient(120deg,#191614_0%,#695546_48%,#c6ad96_100%)]" />
       </Section>
 
       {/* Materials */}

@@ -1,18 +1,23 @@
-import { createApp } from './app.js';
-import { env } from './config/env.js';
-import { prisma } from './config/prisma.js';
-import { logger } from './common/logging/logger.js';
-import { redis } from './config/redis.js';
+import { createApp } from "./app.js";
+import { env } from "./config/env.js";
+import { prisma } from "./config/prisma.js";
+import { logger } from "./common/logging/logger.js";
+import { redis } from "./config/redis.js";
+import { startNotificationWorker } from "./modules/notifications/notification.worker.js";
 
 async function main() {
   const app = createApp();
+  const stopNotificationWorker = startNotificationWorker();
 
-  const server = app.listen(env.PORT, '0.0.0.0', () => {
-    logger.info(`Swoosh API listening on 0.0.0.0:${env.PORT} (${env.NODE_ENV})`);
+  const server = app.listen(env.PORT, "0.0.0.0", () => {
+    logger.info(
+      `Swoosh API listening on 0.0.0.0:${env.PORT} (${env.NODE_ENV})`,
+    );
   });
 
   const shutdown = async (signal: string) => {
     logger.info(`${signal} received, shutting down gracefully...`);
+    stopNotificationWorker();
     server.close(async () => {
       await prisma.$disconnect();
       if (redis?.isOpen) await redis.quit();
@@ -22,14 +27,14 @@ async function main() {
     setTimeout(() => process.exit(1), 10_000).unref();
   };
 
-  process.on('SIGTERM', () => void shutdown('SIGTERM'));
-  process.on('SIGINT', () => void shutdown('SIGINT'));
+  process.on("SIGTERM", () => void shutdown("SIGTERM"));
+  process.on("SIGINT", () => void shutdown("SIGINT"));
 
-  process.on('unhandledRejection', (reason) => {
-    logger.error({ reason }, 'Unhandled promise rejection');
+  process.on("unhandledRejection", (reason) => {
+    logger.error({ reason }, "Unhandled promise rejection");
   });
-  process.on('uncaughtException', (err) => {
-    logger.fatal({ err }, 'Uncaught exception');
+  process.on("uncaughtException", (err) => {
+    logger.fatal({ err }, "Uncaught exception");
     process.exit(1);
   });
 }

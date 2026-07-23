@@ -2,19 +2,23 @@ import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
 import { Link } from "react-router-dom";
 
-export default function CampaignBanner() {
+export default function CampaignBanner({ image }: { image?: string }) {
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: "-100px" });
 
   return (
     <section className="flex flex-col md:flex-row min-h-[80vh]">
       <div className="h-[46svh] min-h-72 w-full md:h-auto md:w-1/2">
-        <img
-          src="https://picsum.photos/seed/swoosh-campaign/900/1200"
-          alt=""
-          loading="lazy"
-          className="w-full h-full object-cover"
-        />
+        {image ? (
+          <img
+            src={image}
+            alt=""
+            loading="lazy"
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="h-full w-full bg-[linear-gradient(145deg,#241f1b,#a38c78)]" />
+        )}
       </div>
 
       <div ref={ref} className="w-full md:w-1/2 bg-surface flex items-center justify-center px-5 py-12 sm:px-8 sm:py-16 md:py-0">

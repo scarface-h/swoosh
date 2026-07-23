@@ -15,7 +15,7 @@ export type PaymentMethod = "COD" | "SSLCOMMERZ" | "BKASH";
 
 export type PaymentStatus = "PENDING" | "PAID" | "FAILED" | "REFUNDED";
 
-export type DeliveryZone = "INSIDE_DHAKA" | "OUTSIDE_DHAKA";
+export type DeliveryZone = "DHAKA_INSIDE" | "OUTSIDE_DHAKA";
 
 export type OrderItem = {
   id: string;

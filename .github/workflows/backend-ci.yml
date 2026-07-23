@@ -1,9 +1,24 @@
 name: Backend CI
 on:
   push:
-    paths: ['apps/api/**','packages/**','infrastructure/**','docker-compose.yml','package*.json','.github/workflows/backend-ci.yml']
+    paths:
+      [
+        "apps/api/**",
+        "packages/**",
+        "infrastructure/**",
+        "docker-compose.yml",
+        "package*.json",
+        ".github/workflows/backend-ci.yml",
+      ]
   pull_request:
-    paths: ['apps/api/**','packages/**','infrastructure/**','docker-compose.yml','package*.json']
+    paths:
+      [
+        "apps/api/**",
+        "packages/**",
+        "infrastructure/**",
+        "docker-compose.yml",
+        "package*.json",
+      ]
 permissions:
   contents: read
 jobs:
@@ -15,13 +30,13 @@ jobs:
         env:
           MYSQL_ROOT_PASSWORD: root
           MYSQL_DATABASE: swoosh_test
-        ports: ['3306:3306']
+        ports: ["3306:3306"]
         options: >-
           --health-cmd="mysqladmin ping -h localhost -proot"
           --health-interval=10s --health-timeout=5s --health-retries=10
       redis:
         image: redis:7.4-alpine
-        ports: ['6379:6379']
+        ports: ["6379:6379"]
         options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=5
     env:
       NODE_ENV: test
@@ -32,7 +47,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: npm }
+        with: { node-version: 24, cache: npm }
       - run: npm ci
       - run: npm run db:validate
       - run: npm run db:generate

@@ -8,15 +8,19 @@ const fadeUp = (delay: number) => ({
   transition: { duration: 0.6, delay },
 });
 
-export default function HeroSection() {
+export default function HeroSection({ image }: { image?: string }) {
   return (
     <section className="relative min-h-[100svh] flex items-center justify-center overflow-hidden">
-      <img
-        src="https://picsum.photos/seed/swoosh-hero/1920/1080"
-        alt=""
-        fetchPriority="high"
-        className="absolute inset-0 w-full h-full object-cover"
-      />
+      {image ? (
+        <img
+          src={image}
+          alt=""
+          fetchPriority="high"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      ) : (
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_25%,#8b7765_0%,#352d28_42%,#171412_100%)]" />
+      )}
       <div className="absolute inset-0 bg-black/50" />
 
       <div className="relative z-10 text-center px-5 max-w-4xl mx-auto">

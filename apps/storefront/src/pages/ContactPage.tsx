@@ -1,106 +1,139 @@
 import { useState } from "react";
-import { MapPin, Phone, Mail, Clock, CheckCircle } from "lucide-react";
-
-const inputClass =
-  "w-full border border-[#DDD8D0] bg-transparent px-4 py-3 text-sm focus:border-[#1A1A1A] outline-none transition-colors";
-const labelClass = "block text-xs uppercase tracking-wider text-[#6B6560] mb-1.5";
+import { AlertCircle, CheckCircle, Clock, Loader2, Mail } from "lucide-react";
+import { apiFetch, ApiError } from "@/lib/api";
 
 export default function ContactPage() {
-  const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    subject: "",
+    message: "",
+  });
+  const [error, setError] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
 
-  function validate() {
-    const e: Record<string, string> = {};
-    if (!form.name.trim()) e.name = "Name is required";
-    if (!form.email.trim()) e.email = "Email is required";
-    if (!form.message.trim()) e.message = "Message is required";
-    return e;
-  }
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setSending(true);
+    setError("");
+    try {
+      await apiFetch("/contact", {
+        method: "POST",
+        body: {
+          name: form.name.trim(),
+          email: form.email.trim(),
+          ...(form.subject.trim() ? { subject: form.subject.trim() } : {}),
+          message: form.message.trim(),
+        },
+      });
+      setSent(true);
+    } catch (caught) {
+      setError(
+        caught instanceof ApiError
+          ? caught.message
+          : "Unable to send your message. Please try again.",
+      );
+    } finally {
+      setSending(false);
+    }
+  };
 
-  function handleSubmit(ev: React.FormEvent) {
-    ev.preventDefault();
-    const e = validate();
-    if (Object.keys(e).length) { setErrors(e); return; }
-    setErrors({});
-    setIsLoading(true);
-    setTimeout(() => { setIsLoading(false); setIsSuccess(true); }, 1500);
-  }
+  const update =
+    (key: keyof typeof form) =>
+    (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      setForm((current) => ({ ...current, [key]: event.target.value }));
+      setError("");
+    };
 
-  const set = (k: keyof typeof form) => (ev: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-    setForm((f) => ({ ...f, [k]: ev.target.value }));
+  const fieldClass =
+    "min-h-12 w-full border border-line bg-transparent px-4 text-sm outline-none focus:border-ink";
 
   return (
-    <main className="pt-24 sm:pt-32 pb-16 sm:pb-20 max-w-[1440px] mx-auto px-4 sm:px-6">
-      <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl text-[#1A1A1A]">Get in Touch</h1>
-      <p className="mt-3 sm:mt-4 text-[#6B6560] text-base sm:text-lg">We would love to hear from you.</p>
+    <main className="mx-auto max-w-[1440px] px-4 pb-16 pt-24 sm:px-6 sm:pb-20 sm:pt-32">
+      <h1 className="font-serif text-4xl text-ink sm:text-5xl md:text-6xl">
+        Get in Touch
+      </h1>
+      <p className="mt-3 text-base text-muted sm:text-lg">
+        We would love to hear from you.
+      </p>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 mt-10 sm:mt-16">
-        {/* Form */}
-        <div>
-          {isSuccess ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center gap-4">
-              <CheckCircle className="w-12 h-12 text-[#287A55]" />
-              <p className="font-serif text-xl text-[#1A1A1A]">
-                Message sent. We'll be in touch soon.
-              </p>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-              {(["name", "email", "subject"] as const).map((k) => (
-                <div key={k}>
-                  <label className={labelClass}>
-                    {k.charAt(0).toUpperCase() + k.slice(1)}
-                    {k !== "subject" && " *"}
-                  </label>
-                  <input
-                    type={k === "email" ? "email" : "text"}
-                    value={form[k]}
-                    onChange={set(k)}
-                    className={`${inputClass} ${errors[k] ? "border-[#B83232]" : ""}`}
-                  />
-                  {errors[k] && <p className="text-xs text-[#B83232] mt-1">{errors[k]}</p>}
-                </div>
-              ))}
-              <div>
-                <label className={labelClass}>Message *</label>
-                <textarea
-                  rows={6}
-                  value={form.message}
-                  onChange={set("message")}
-                  className={`${inputClass} resize-none ${errors.message ? "border-[#B83232]" : ""}`}
-                />
-                {errors.message && <p className="text-xs text-[#B83232] mt-1">{errors.message}</p>}
-              </div>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="min-h-12 w-full sm:w-auto self-start bg-[#1A1A1A] text-white px-8 py-4 text-sm uppercase tracking-widest font-medium hover:bg-[#C44A2D] transition-colors disabled:opacity-60"
-              >
-                {isLoading ? "Sending..." : "Send Message"}
-              </button>
-            </form>
-          )}
-        </div>
-
-        {/* Contact info */}
-        <div>
-          <div className="flex flex-col gap-6">
-            {[
-              { icon: <MapPin className="w-5 h-5 mt-0.5 shrink-0" />, text: "House 42, Road 11, Dhanmondi, Dhaka 1205, Bangladesh" },
-              { icon: <Phone className="w-5 h-5 mt-0.5 shrink-0" />, text: "+880 1234-567890" },
-              { icon: <Mail className="w-5 h-5 mt-0.5 shrink-0" />, text: "hello@swoosh.bd" },
-              { icon: <Clock className="w-5 h-5 mt-0.5 shrink-0" />, text: "Sunday–Thursday, 10:00 AM – 7:00 PM" },
-            ].map((item, i) => (
-              <div key={i} className="flex items-start gap-3 text-[#6B6560] text-sm">
-                {item.icon}
-                <span>{item.text}</span>
-              </div>
-            ))}
+      <div className="mt-10 grid grid-cols-1 gap-10 sm:mt-16 lg:grid-cols-2 lg:gap-16">
+        {sent ? (
+          <div className="flex min-h-72 flex-col items-center justify-center gap-4 text-center">
+            <CheckCircle size={48} className="text-success" />
+            <p className="font-serif text-xl">Message received.</p>
+            <p className="max-w-sm text-sm text-muted">
+              Our team will respond using the email address you provided.
+            </p>
           </div>
-          <div className="mt-8 bg-surface h-56 sm:h-64 flex items-center justify-center text-[#6B6560] text-sm border border-[#DDD8D0]">
-            Map placeholder
+        ) : (
+          <form onSubmit={submit} className="space-y-6">
+            {error && (
+              <div
+                className="flex items-start gap-2 border border-error/30 bg-error/5 p-3 text-sm text-error"
+                role="alert"
+              >
+                <AlertCircle size={17} className="mt-0.5 shrink-0" />
+                {error}
+              </div>
+            )}
+            {(["name", "email", "subject"] as const).map((key) => (
+              <label key={key}>
+                <span className="mb-1.5 block text-xs uppercase tracking-wider text-muted">
+                  {key.charAt(0).toUpperCase() + key.slice(1)}
+                  {key !== "subject" && " *"}
+                </span>
+                <input
+                  required={key !== "subject"}
+                  type={key === "email" ? "email" : "text"}
+                  minLength={key === "name" ? 2 : undefined}
+                  maxLength={key === "subject" ? 200 : 191}
+                  value={form[key]}
+                  onChange={update(key)}
+                  className={fieldClass}
+                />
+              </label>
+            ))}
+            <label>
+              <span className="mb-1.5 block text-xs uppercase tracking-wider text-muted">
+                Message *
+              </span>
+              <textarea
+                required
+                minLength={5}
+                maxLength={5000}
+                rows={7}
+                value={form.message}
+                onChange={update("message")}
+                className={`${fieldClass} resize-y py-3`}
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={sending}
+              className="flex min-h-12 w-full items-center justify-center gap-2 bg-ink px-8 text-sm font-medium uppercase tracking-widest text-white disabled:opacity-60 sm:w-auto"
+            >
+              {sending && <Loader2 size={16} className="animate-spin" />}
+              {sending ? "Sending…" : "Send Message"}
+            </button>
+          </form>
+        )}
+
+        <div>
+          <div className="space-y-6 text-sm text-muted">
+            <p className="flex items-start gap-3">
+              <Mail size={19} className="shrink-0" />
+              hello@swoosh.bd
+            </p>
+            <p className="flex items-start gap-3">
+              <Clock size={19} className="shrink-0" />
+              Sunday–Thursday, 10:00 AM–7:00 PM
+            </p>
+          </div>
+          <div className="mt-8 border border-line bg-surface p-6 text-sm leading-relaxed text-muted">
+            For order questions, include your order number and the phone number
+            used at checkout so our team can help quickly.
           </div>
         </div>
       </div>

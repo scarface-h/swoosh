@@ -1,14 +1,22 @@
-import rateLimit from 'express-rate-limit';
-import { sendError } from '../http/response.js';
-import { RedisStore } from 'rate-limit-redis';
-import { redis } from '../../config/redis.js';
+import rateLimit from "express-rate-limit";
+import { sendError } from "../http/response.js";
+import { RedisStore } from "rate-limit-redis";
+import { redis } from "../../config/redis.js";
 
 const handler = (_req: unknown, res: unknown) =>
-  sendError(res as never, 429, 'RATE_LIMIT_EXCEEDED', 'Too many requests. Please slow down.');
+  sendError(
+    res as never,
+    429,
+    "RATE_LIMIT_EXCEEDED",
+    "Too many requests. Please slow down.",
+  );
 const store = (prefix: string) => {
   const client = redis;
   return client
-    ? new RedisStore({ prefix, sendCommand: (...args: string[]) => client.sendCommand(args) })
+    ? new RedisStore({
+        prefix,
+        sendCommand: (...args: string[]) => client.sendCommand(args),
+      })
     : undefined;
 };
 
@@ -19,7 +27,7 @@ export const apiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   handler,
-  store: store('rl:api:'),
+  store: store("rl:api:"),
 });
 
 /** Stricter limiter for authentication endpoints (brute-force protection). */
@@ -29,7 +37,7 @@ export const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   handler,
-  store: store('rl:auth:'),
+  store: store("rl:auth:"),
 });
 
 /** Checkout / order creation limiter. */
@@ -39,5 +47,15 @@ export const checkoutLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   handler,
-  store: store('rl:checkout:'),
+  store: store("rl:checkout:"),
+});
+
+/** Public contact/newsletter form spam protection. */
+export const publicFormLimiter = rateLimit({
+  windowMs: 15 * 60_000,
+  limit: 8,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler,
+  store: store("rl:public-form:"),
 });
