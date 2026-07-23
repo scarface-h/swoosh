@@ -892,7 +892,7 @@ export default function ProductEditModal({
                   Up to 12 images. Choose a primary storefront image after
                   upload.
                 </p>
-                <label className="mt-4 inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl bg-ink px-4 text-sm font-semibold text-white">
+                <label className="mt-4 inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl bg-ink px-4 text-sm font-semibold text-surface">
                   {busy === "images" ? (
                     <Loader2 size={16} className="animate-spin" />
                   ) : (
@@ -1130,7 +1130,7 @@ export default function ProductEditModal({
                   />
                   <button
                     type="button"
-                    className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-ink px-4 text-sm text-white"
+                    className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-ink px-4 text-sm text-surface"
                     onClick={() => void addOption()}
                   >
                     <Plus size={16} /> Add option
@@ -1389,7 +1389,7 @@ export default function ProductEditModal({
                       <button
                         type="button"
                         disabled={busy === variant.id}
-                        className="mt-4 flex min-h-11 items-center gap-2 rounded-xl bg-ink px-4 text-sm font-semibold text-white"
+                        className="mt-4 flex min-h-11 items-center gap-2 rounded-xl bg-ink px-4 text-sm font-semibold text-surface"
                         onClick={() => void saveVariant(variant)}
                       >
                         {busy === variant.id ? (

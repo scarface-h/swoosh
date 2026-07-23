@@ -1481,7 +1481,7 @@ export default function ProductCreateModal({
                 <button
                   type="button"
                   onClick={generateVariants}
-                  className="mt-5 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-ink px-5 text-sm font-semibold text-white sm:w-auto"
+                  className="mt-5 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-ink px-5 text-sm font-semibold text-surface sm:w-auto"
                 >
                   <WandSparkles size={17} /> Generate {variantCount} variant
                   {variantCount === 1 ? "" : "s"}
@@ -1733,7 +1733,7 @@ export default function ProductCreateModal({
               <button
                 type="button"
                 onClick={() => setSection(sectionOrder[activeIndex + 1])}
-                className="flex min-h-11 items-center gap-2 rounded-xl bg-ink px-5 text-sm font-semibold text-white"
+                className="flex min-h-11 items-center gap-2 rounded-xl bg-ink px-5 text-sm font-semibold text-surface"
               >
                 Next <ChevronRight size={16} />
               </button>

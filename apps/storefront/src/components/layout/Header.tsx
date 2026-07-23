@@ -26,6 +26,14 @@ const categoryHref = (category: PublicCategory, parent?: PublicCategory) => {
   }
   return `/shop?category=${category.slug}`;
 };
+const flattenCategoryChildren = (
+  categories: PublicCategory[],
+  depth = 0,
+): Array<{ category: PublicCategory; depth: number }> =>
+  categories.flatMap((category) => [
+    { category, depth },
+    ...flattenCategoryChildren(category.children ?? [], depth + 1),
+  ]);
 const fallbackCategories: PublicCategory[] = [
   {
     id: "fallback-men",
@@ -164,6 +172,21 @@ export default function Header() {
     setMenuOpen(false);
     setDesktopMenu(null);
   }, [pathname]);
+
+  useEffect(() => {
+    if (!menuOpen && !desktopMenu) return;
+    const refreshKey = Date.now();
+    void apiFetch<PublicCategory[]>(`/categories?refresh=${refreshKey}`)
+      .then((items) => {
+        if (items.length) setCategories(items);
+      })
+      .catch(() => undefined);
+    void apiFetch<PublicCollection[]>(`/collections?refresh=${refreshKey}`)
+      .then((items) => {
+        if (items.length) setCollections(items);
+      })
+      .catch(() => undefined);
+  }, [desktopMenu, menuOpen]);
 
   useEffect(() => {
     if (!desktopMenu) return;
@@ -391,11 +414,14 @@ export default function Header() {
                           </span>
                         </Link>
                         <div className="pt-2">
-                          {category.children?.map((child) => (
+                          {flattenCategoryChildren(
+                            category.children ?? [],
+                          ).map(({ category: child, depth }) => (
                             <Link
                               key={child.id}
                               to={categoryHref(child, category)}
                               className="flex min-h-8 items-center justify-between text-sm text-[#6B6560] hover:text-[#1A1A1A]"
+                              style={{ paddingLeft: `${depth * 0.75}rem` }}
                             >
                               {child.name}
                               {(child._count?.products ?? 0) > 0 && (
@@ -494,16 +520,19 @@ export default function Header() {
                     </Link>
                     {category.children?.length ? (
                       <div className="flex flex-wrap gap-x-4 gap-y-1 pb-2">
-                        {category.children.map((child) => (
+                        {flattenCategoryChildren(category.children).map(
+                          ({ category: child, depth }) => (
                           <Link
                             key={child.id}
                             to={categoryHref(child, category)}
                             onClick={() => setMenuOpen(false)}
                             className="py-1 text-sm text-muted"
+                            style={{ marginLeft: `${depth * 0.75}rem` }}
                           >
                             {child.name}
                           </Link>
-                        ))}
+                          ),
+                        )}
                       </div>
                     ) : null}
                   </div>

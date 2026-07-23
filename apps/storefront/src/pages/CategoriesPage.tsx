@@ -5,6 +5,28 @@ import { apiFetch } from "@/lib/api";
 import { type PublicCategory } from "@/lib/catalog";
 import { CategoryGridSkeleton } from "@/components/catalog/CatalogSkeletons";
 
+const preferredDepartments = ["men", "women", "accessories"];
+const categoryHref = (
+  category: PublicCategory,
+  department?: PublicCategory,
+) => {
+  const root = department ?? category;
+  if (preferredDepartments.includes(root.slug)) {
+    const query = new URLSearchParams({ department: root.slug });
+    if (department) query.set("category", category.slug);
+    return `/shop?${query.toString()}`;
+  }
+  return `/shop?category=${category.slug}`;
+};
+const flattenCategoryChildren = (
+  categories: PublicCategory[],
+  depth = 0,
+): Array<{ category: PublicCategory; depth: number }> =>
+  categories.flatMap((category) => [
+    { category, depth },
+    ...flattenCategoryChildren(category.children ?? [], depth + 1),
+  ]);
+
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<PublicCategory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,7 +67,7 @@ export default function CategoriesPage() {
               className="group overflow-hidden border border-line bg-surface"
             >
               <Link
-                to={`/shop?category=${category.slug}`}
+                to={categoryHref(category)}
                 className="relative block aspect-[16/8] overflow-hidden"
               >
                 {category.imageUrl ? (
@@ -78,15 +100,18 @@ export default function CategoriesPage() {
               </Link>
               {Boolean(category.children?.length) && (
                 <div className="flex flex-wrap gap-2 p-4">
-                  {category.children?.map((child) => (
+                  {flattenCategoryChildren(category.children ?? []).map(
+                    ({ category: child, depth }) => (
                     <Link
                       key={child.id}
-                      to={`/shop?category=${child.slug}`}
+                      to={categoryHref(child, category)}
                       className="rounded-full border border-line bg-background px-3 py-2 text-xs text-ink transition-colors hover:border-ink"
+                      style={{ marginLeft: `${depth * 0.25}rem` }}
                     >
                       {child.name}
                     </Link>
-                  ))}
+                    ),
+                  )}
                 </div>
               )}
             </article>

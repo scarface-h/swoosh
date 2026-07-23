@@ -155,6 +155,15 @@ export default function ProductsPage() {
 
   const permanentlyDelete = async () => {
     if (!deletingProduct || deleting) return;
+    const confirmation = deleteConfirmation.trim();
+    if (confirmation !== deletingProduct.name) {
+      setError(`Type “${deletingProduct.name}” exactly to confirm deletion.`);
+      return;
+    }
+    if (!deletePassword.trim()) {
+      setError("Enter your administrator password to confirm deletion.");
+      return;
+    }
     setDeleting(true);
     setError("");
     try {
@@ -164,7 +173,7 @@ export default function ProductsPage() {
           method: "POST",
           body: {
             password: deletePassword,
-            confirmation: deleteConfirmation,
+            confirmation,
           },
         },
       );
@@ -319,7 +328,7 @@ export default function ProductsPage() {
                       setNotice("");
                       setEditProductId(product.id);
                     }}
-                    className="flex min-h-10 items-center gap-1.5 rounded-lg bg-ink px-3 text-sm text-white"
+                    className="flex min-h-10 items-center gap-1.5 rounded-lg bg-ink px-3 text-sm text-surface"
                   >
                     <Edit3 size={15} /> Edit
                   </button>
@@ -432,9 +441,21 @@ export default function ProductsPage() {
                   onChange={(event) =>
                     setDeleteConfirmation(event.target.value)
                   }
+                  placeholder={deletingProduct.name}
                   autoComplete="off"
                   className="min-h-11 w-full rounded-xl border border-line bg-background px-3 text-sm"
                 />
+                <span
+                  className={`mt-1.5 block text-xs ${
+                    deleteConfirmation.trim() === deletingProduct.name
+                      ? "text-success"
+                      : "text-muted"
+                  }`}
+                >
+                  {deleteConfirmation.trim() === deletingProduct.name
+                    ? "Product name matches."
+                    : "This must match the product name exactly."}
+                </span>
               </label>
               <label>
                 <span className="mb-1.5 block text-sm font-medium text-ink">
@@ -447,6 +468,15 @@ export default function ProductsPage() {
                   autoComplete="current-password"
                   className="min-h-11 w-full rounded-xl border border-line bg-background px-3 text-sm"
                 />
+                <span
+                  className={`mt-1.5 block text-xs ${
+                    deletePassword.trim() ? "text-success" : "text-muted"
+                  }`}
+                >
+                  {deletePassword.trim()
+                    ? "Administrator password entered."
+                    : "Your password is verified securely by the API."}
+                </span>
               </label>
             </div>
             <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
@@ -460,13 +490,9 @@ export default function ProductsPage() {
               </button>
               <button
                 type="button"
-                disabled={
-                  deleting ||
-                  !deletePassword ||
-                  deleteConfirmation !== deletingProduct.name
-                }
+                disabled={deleting}
                 onClick={() => void permanentlyDelete()}
-                className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-error px-5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-error px-5 text-sm font-semibold text-white shadow-sm hover:bg-error/90 disabled:cursor-wait disabled:opacity-60"
               >
                 {deleting ? (
                   <Loader2 size={16} className="animate-spin" />

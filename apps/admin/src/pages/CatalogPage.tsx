@@ -127,7 +127,7 @@ export default function CatalogPage() {
       setCategoryDescription("");
       setCategoryImage("");
       setNotice(
-        "Category created. It is now available in products and the shop.",
+        "Category created and published. Open the storefront Categories menu to see it under the selected parent.",
       );
       await load();
     } catch (caught) {
@@ -164,7 +164,11 @@ export default function CatalogPage() {
       setCollectionDescription("");
       setCollectionBanner("");
       setCollectionFeatured(false);
-      setNotice("Collection created and connected to the storefront.");
+      setNotice(
+        collectionFeatured
+          ? "Collection created, added to the storefront menu, and featured on the homepage."
+          : "Collection created and added to the storefront menu. Use “Feature on homepage” to place it on the homepage.",
+      );
       await load();
     } catch (caught) {
       setError(
