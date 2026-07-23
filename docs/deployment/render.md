@@ -37,8 +37,8 @@ Render prompts for every variable marked `sync: false`. Use:
 | API        | `SMTP_PASSWORD`          | SMTP password or provider API credential                                        |
 | API        | `EMAIL_FROM`             | Verified sender, such as `Swoosh Shop <orders@example.com>`                     |
 | API        | `CONTACT_EMAIL`          | Inbox that receives website contact messages                                    |
-| Storefront | `VITE_API_BASE_URL`     | `https://swoosh-shop-api.onrender.com/api/v1`                                   |
-| Admin      | `VITE_API_BASE_URL`     | `https://swoosh-shop-api.onrender.com/api/v1`                                   |
+| Storefront | `VITE_API_BASE_URL`     | `https://swoosh-shop-api-l59n.onrender.com/api/v1`                              |
+| Admin      | `VITE_API_BASE_URL`     | `https://swoosh-shop-api-l59n.onrender.com/api/v1`                              |
 
 If Render assigns different service subdomains, replace the example URLs with
 the actual HTTPS URLs, then redeploy both static sites and the API.

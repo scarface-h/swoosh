@@ -1,4 +1,9 @@
-const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? "/api/v1").replace(/\/$/, "");
+const PRODUCTION_API_BASE =
+  "https://swoosh-shop-api-l59n.onrender.com/api/v1";
+const API_BASE = (
+  import.meta.env.VITE_API_BASE_URL ??
+  (import.meta.env.PROD ? PRODUCTION_API_BASE : "/api/v1")
+).replace(/\/$/, "");
 
 interface ApiSuccess<T> {
   success: true;
