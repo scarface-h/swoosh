@@ -373,10 +373,17 @@ export default function ProductsPage() {
           categories={categories}
           collections={collections}
           onClose={() => setCreateOpen(false)}
-          onCreated={(message) => {
+          onCreated={(message, warning) => {
             setCreateOpen(false);
-            setNotice(message);
-            void load();
+            void load().then(() => {
+              if (warning) {
+                setNotice("");
+                setError(message);
+              } else {
+                setError("");
+                setNotice(message);
+              }
+            });
           }}
         />
       )}

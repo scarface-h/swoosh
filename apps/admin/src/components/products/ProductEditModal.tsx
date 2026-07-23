@@ -141,6 +141,7 @@ export default function ProductEditModal({
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [remoteImageUrl, setRemoteImageUrl] = useState("");
   const [newOptionName, setNewOptionName] = useState("");
   const [newOptionValues, setNewOptionValues] = useState("");
   const [newValues, setNewValues] = useState<Record<string, string>>({});
@@ -305,7 +306,22 @@ export default function ProductEditModal({
             method: "POST",
             body,
           });
-          if (!response.ok) throw new Error("The image upload was rejected.");
+          if (!response.ok) {
+            let detail = "";
+            try {
+              const failure = (await response.json()) as {
+                error?: { message?: string };
+              };
+              detail = failure.error?.message?.trim() ?? "";
+            } catch {
+              // The provider did not return a structured error.
+            }
+            throw new Error(
+              detail
+                ? `Cloudinary rejected the image: ${detail}`
+                : "Cloudinary rejected the image. Check its credentials in Render.",
+            );
+          }
           const uploaded = (await response.json()) as {
             secure_url: string;
             public_id: string;
@@ -340,6 +356,44 @@ export default function ProductEditModal({
       setNotice(
         `${accepted.length} image${accepted.length === 1 ? "" : "s"} uploaded.`,
       );
+      await load();
+    } catch (caught) {
+      setError(errorMessage(caught));
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const addRemoteImage = async () => {
+    if (!product || busy) return;
+    const value = remoteImageUrl.trim();
+    try {
+      const parsed = new URL(value);
+      if (parsed.protocol !== "https:") {
+        throw new Error("Use an HTTPS image URL.");
+      }
+    } catch {
+      setError("Enter a complete HTTPS image URL.");
+      return;
+    }
+    if (product.images.length >= 12) {
+      setError("A product can have up to 12 images.");
+      return;
+    }
+    setBusy("remote-image");
+    setError("");
+    try {
+      await adminApiFetch(`/admin/products/${product.id}/images`, {
+        method: "POST",
+        body: {
+          url: value,
+          altText: product.name,
+          sortOrder: product.images.length,
+          isPrimary: product.images.length === 0,
+        },
+      });
+      setRemoteImageUrl("");
+      setNotice("Image URL added and published to the storefront.");
       await load();
     } catch (caught) {
       setError(errorMessage(caught));
@@ -908,6 +962,23 @@ export default function ProductEditModal({
                     onChange={(e) => void uploadFiles(e.target.files)}
                   />
                 </label>
+                <div className="mx-auto mt-4 flex max-w-2xl flex-col gap-2 sm:flex-row">
+                  <input
+                    type="url"
+                    value={remoteImageUrl}
+                    onChange={(event) => setRemoteImageUrl(event.target.value)}
+                    placeholder="Or paste a direct HTTPS image URL"
+                    className={input}
+                  />
+                  <button
+                    type="button"
+                    disabled={busy === "remote-image"}
+                    onClick={() => void addRemoteImage()}
+                    className="min-h-11 shrink-0 rounded-xl border border-line px-4 text-sm font-semibold disabled:opacity-50"
+                  >
+                    {busy === "remote-image" ? "Adding…" : "Add image URL"}
+                  </button>
+                </div>
               </div>
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {product.images.map((image, index) => (

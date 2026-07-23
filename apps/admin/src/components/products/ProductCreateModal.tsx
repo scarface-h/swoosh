@@ -33,7 +33,7 @@ interface Props {
   categories: Category[];
   collections: Collection[];
   onClose: () => void;
-  onCreated: (message: string) => void;
+  onCreated: (message: string, warning?: boolean) => void;
 }
 
 interface UploadSignature {
@@ -437,7 +437,22 @@ export default function ProductCreateModal({
         method: "POST",
         body,
       });
-      if (!response.ok) throw new Error("Cloudinary rejected an image.");
+      if (!response.ok) {
+        let detail = "";
+        try {
+          const failure = (await response.json()) as {
+            error?: { message?: string };
+          };
+          detail = failure.error?.message?.trim() ?? "";
+        } catch {
+          // The provider did not return a structured error.
+        }
+        throw new Error(
+          detail
+            ? `Cloudinary rejected the image: ${detail}`
+            : "Cloudinary rejected the image. Check its credentials in Render.",
+        );
+      }
       const uploaded = (await response.json()) as {
         secure_url: string;
         public_id: string;
@@ -574,10 +589,25 @@ export default function ProductCreateModal({
     }
     setSaving(true);
     setError("");
-    setProgress("Creating product, options and inventory…");
+    setProgress(
+      images.length
+        ? "Checking product media storage…"
+        : "Creating product, options and inventory…",
+    );
     const numberOrNull = (value: string) =>
       value ? Number(value) : null;
     try {
+      if (images[0]) {
+        await adminApiFetch<UploadSignature>("/admin/uploads/presign", {
+          method: "POST",
+          body: {
+            mimeType: images[0].file.type,
+            fileSize: images[0].file.size,
+            purpose: "product",
+          },
+        });
+        setProgress("Creating product, options and inventory…");
+      }
       const created = await adminApiFetch<{ id: string }>(
         "/admin/products/full",
         {
@@ -644,20 +674,25 @@ export default function ProductCreateModal({
         },
       );
 
-      let failedImages = 0;
+      const imageErrors: string[] = [];
       for (const [index, image] of images.entries()) {
         setProgress(`Uploading image ${index + 1} of ${images.length}…`);
         try {
           await uploadImage(created.id, image, index);
-        } catch {
-          failedImages += 1;
+        } catch (caught) {
+          imageErrors.push(messageFor(caught));
         }
       }
-      onCreated(
-        failedImages
-          ? `Product and inventory created. ${failedImages} image${failedImages === 1 ? "" : "s"} could not be uploaded.`
-          : `Product created with ${variants.length} variant${variants.length === 1 ? "" : "s"} and ${images.length} image${images.length === 1 ? "" : "s"}.`,
-      );
+      if (imageErrors.length) {
+        onCreated(
+          `Product and inventory created, but ${imageErrors.length} image${imageErrors.length === 1 ? "" : "s"} failed: ${[...new Set(imageErrors)].join(" ")} Open Edit → Media gallery to retry.`,
+          true,
+        );
+      } else {
+        onCreated(
+          `Product created with ${variants.length} variant${variants.length === 1 ? "" : "s"} and ${images.length} image${images.length === 1 ? "" : "s"}.`,
+        );
+      }
     } catch (caught) {
       setError(messageFor(caught));
       setProgress("");
