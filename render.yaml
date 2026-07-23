@@ -4,7 +4,7 @@ services:
     runtime: node
     plan: free
     region: singapore
-    buildCommand: npm ci && npm run db:generate -w apps/api && npm run db:deploy -w apps/api && npm run build -w apps/api
+    buildCommand: npm ci --include=dev && npm run db:generate -w apps/api && npm run db:deploy -w apps/api && npm run build -w apps/api
     startCommand: npm run start -w apps/api
     healthCheckPath: /ready
     autoDeployTrigger: commit
@@ -39,7 +39,7 @@ services:
   - type: web
     name: swoosh-shop-store
     runtime: static
-    buildCommand: npm ci && npm run build -w apps/storefront
+    buildCommand: npm ci --include=dev && npm run build -w apps/storefront
     staticPublishPath: ./apps/storefront/dist
     autoDeployTrigger: commit
     envVars:
@@ -66,7 +66,7 @@ services:
   - type: web
     name: swoosh-shop-admin
     runtime: static
-    buildCommand: npm ci && npm run build -w apps/admin
+    buildCommand: npm ci --include=dev && npm run build -w apps/admin
     staticPublishPath: ./apps/admin/dist
     autoDeployTrigger: commit
     envVars:

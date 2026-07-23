@@ -22,17 +22,17 @@ the root `render.yaml`.
 
 Render prompts for every variable marked `sync: false`. Use:
 
-| Service | Variable | Value |
-| --- | --- | --- |
-| API | `DATABASE_URL` | TiDB URL with `sslaccept=strict`; omit the local Windows `sslcert` path |
-| API | `CORS_ORIGINS` | `https://swoosh-shop-store.onrender.com,https://swoosh-shop-admin.onrender.com` |
-| API | `STOREFRONT_URL` | `https://swoosh-shop-store.onrender.com` |
-| API | `ADMIN_URL` | `https://swoosh-shop-admin.onrender.com` |
-| API | `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name |
-| API | `CLOUDINARY_API_KEY` | Cloudinary API key |
-| API | `CLOUDINARY_API_SECRET` | Cloudinary API secret |
-| Storefront | `VITE_API_BASE_URL` | `https://swoosh-shop-api.onrender.com/api/v1` |
-| Admin | `VITE_API_BASE_URL` | `https://swoosh-shop-api.onrender.com/api/v1` |
+| Service    | Variable                | Value                                                                           |
+| ---------- | ----------------------- | ------------------------------------------------------------------------------- |
+| API        | `DATABASE_URL`          | TiDB URL with `sslaccept=strict`; omit the local Windows `sslcert` path         |
+| API        | `CORS_ORIGINS`          | `https://swoosh-shop-store.onrender.com,https://swoosh-shop-admin.onrender.com` |
+| API        | `STOREFRONT_URL`        | `https://swoosh-shop-store.onrender.com`                                        |
+| API        | `ADMIN_URL`             | `https://swoosh-shop-admin.onrender.com`                                        |
+| API        | `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name                                                           |
+| API        | `CLOUDINARY_API_KEY`    | Cloudinary API key                                                              |
+| API        | `CLOUDINARY_API_SECRET` | Cloudinary API secret                                                           |
+| Storefront | `VITE_API_BASE_URL`     | `https://swoosh-shop-api.onrender.com/api/v1`                                   |
+| Admin      | `VITE_API_BASE_URL`     | `https://swoosh-shop-api.onrender.com/api/v1`                                   |
 
 If Render assigns different service subdomains, replace the example URLs with
 the actual HTTPS URLs, then redeploy both static sites and the API.
@@ -48,7 +48,7 @@ Free Render web services do not support pre-deploy commands. The API build
 therefore runs:
 
 ```text
-npm ci
+npm ci --include=dev
 npm run db:generate -w apps/api
 npm run db:deploy -w apps/api
 npm run build -w apps/api
