@@ -1701,7 +1701,7 @@ export default function ProductCreateModal({
                         }
                         className="accent-accent"
                       />
-                      Feature on storefront
+                      Show in Crafted for You / Customer Favourites
                     </label>
                     <label className="flex min-h-11 items-center gap-3 rounded-xl border border-line px-3 text-sm">
                       <input
@@ -1712,7 +1712,7 @@ export default function ProductCreateModal({
                         }
                         className="accent-accent"
                       />
-                      Mark as new arrival
+                      Show in New Arrivals / Just Dropped
                     </label>
                   </div>
                 </div>

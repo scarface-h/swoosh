@@ -340,7 +340,7 @@ export default function Header() {
                   ? "desktop-categories-menu"
                   : "desktop-collections-menu"
               }
-              className="fixed left-1/2 top-[72px] z-[60] hidden max-h-[calc(100vh-5.5rem)] w-[min(94vw,70rem)] -translate-x-1/2 overflow-y-auto border border-[#DDD8D0] bg-white text-[#1A1A1A] shadow-2xl lg:block"
+              className="fixed inset-x-0 top-[72px] z-[60] mx-auto hidden max-h-[calc(100vh-5.5rem)] w-[min(94vw,70rem)] overflow-y-auto border border-[#DDD8D0] bg-white text-[#1A1A1A] shadow-2xl lg:block"
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}

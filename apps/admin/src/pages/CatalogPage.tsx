@@ -195,6 +195,14 @@ export default function CatalogPage() {
     await load();
   };
 
+  const toggleCollectionFeatured = async (collection: Collection) => {
+    await adminApiFetch(`/admin/collections/${collection.id}`, {
+      method: "PATCH",
+      body: { isFeatured: !collection.isFeatured },
+    });
+    await load();
+  };
+
   return (
     <div className="mx-auto max-w-6xl">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -454,17 +462,34 @@ export default function CatalogPage() {
                         /collection/{collection.slug}
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => void toggleCollection(collection)}
-                      className={`min-h-9 rounded-full px-3 text-xs font-medium ${
-                        collection.isActive
-                          ? "bg-success/10 text-success"
-                          : "bg-background text-muted"
-                      }`}
-                    >
-                      {collection.isActive ? "Visible" : "Hidden"}
-                    </button>
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          void toggleCollectionFeatured(collection)
+                        }
+                        className={`min-h-9 rounded-full px-3 text-xs font-medium ${
+                          collection.isFeatured
+                            ? "bg-warning/10 text-warning"
+                            : "bg-background text-muted"
+                        }`}
+                      >
+                        {collection.isFeatured
+                          ? "Homepage featured"
+                          : "Feature on homepage"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void toggleCollection(collection)}
+                        className={`min-h-9 rounded-full px-3 text-xs font-medium ${
+                          collection.isActive
+                            ? "bg-success/10 text-success"
+                            : "bg-background text-muted"
+                        }`}
+                      >
+                        {collection.isActive ? "Visible" : "Hidden"}
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

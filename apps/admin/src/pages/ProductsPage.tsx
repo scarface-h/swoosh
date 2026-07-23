@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, PackagePlus, Plus, RefreshCw } from "lucide-react";
+import {
+  Loader2,
+  PackagePlus,
+  Plus,
+  RefreshCw,
+  Sparkles,
+  X,
+} from "lucide-react";
 import ProductCreateModal, {
   type Category,
   type Collection,
@@ -16,6 +23,9 @@ interface Product {
   category: Category;
   images: Array<{ id: string; url: string; altText: string | null }>;
   variants: Array<{ id: string }>;
+  isFeatured: boolean;
+  isNewArrival: boolean;
+  collections: Array<{ collectionId: string }>;
 }
 
 const money = new Intl.NumberFormat("en-BD", {
@@ -33,6 +43,15 @@ export default function ProductsPage() {
   const [notice, setNotice] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [updating, setUpdating] = useState("");
+  const [placementProduct, setPlacementProduct] = useState<Product | null>(
+    null,
+  );
+  const [placementFeatured, setPlacementFeatured] = useState(false);
+  const [placementNewArrival, setPlacementNewArrival] = useState(false);
+  const [placementCollections, setPlacementCollections] = useState<string[]>(
+    [],
+  );
+  const [savingPlacement, setSavingPlacement] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -86,6 +105,45 @@ export default function ProductsPage() {
     }
   };
 
+  const openPlacement = (product: Product) => {
+    setPlacementProduct(product);
+    setPlacementFeatured(product.isFeatured);
+    setPlacementNewArrival(product.isNewArrival);
+    setPlacementCollections(
+      product.collections.map((collection) => collection.collectionId),
+    );
+    setError("");
+  };
+
+  const savePlacement = async () => {
+    if (!placementProduct) return;
+    setSavingPlacement(true);
+    setError("");
+    try {
+      await adminApiFetch(`/admin/products/${placementProduct.id}`, {
+        method: "PATCH",
+        body: {
+          isFeatured: placementFeatured,
+          isNewArrival: placementNewArrival,
+          collectionIds: placementCollections,
+        },
+      });
+      setPlacementProduct(null);
+      setNotice(
+        "Storefront placement saved. Active products update on the shop automatically.",
+      );
+      await load();
+    } catch (caught) {
+      setError(
+        caught instanceof ApiError
+          ? caught.message
+          : "Unable to save storefront placement.",
+      );
+    } finally {
+      setSavingPlacement(false);
+    }
+  };
+
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -123,6 +181,16 @@ export default function ProductsPage() {
         </div>
       )}
 
+      <div className="mb-5 rounded-xl border border-accent/20 bg-accent/5 p-4 text-sm text-ink">
+        <p className="font-medium">Homepage placement</p>
+        <p className="mt-1 leading-relaxed text-muted">
+          Use <strong>Placement</strong> on any product to add it to New
+          Arrivals, Crafted for You / Customer Favourites, or one or more
+          collections. The product must be published and have stock to appear
+          for customers.
+        </p>
+      </div>
+
       <div className="overflow-hidden rounded-xl border border-line bg-surface">
         {loading ? (
           <div className="flex min-h-48 items-center justify-center gap-2 text-sm text-muted">
@@ -146,7 +214,7 @@ export default function ProductsPage() {
             {products.map((product) => (
               <article
                 key={product.id}
-                className="grid gap-3 px-4 py-4 sm:px-5 md:grid-cols-[minmax(0,2fr)_1fr_7rem_8rem_5rem_auto] md:items-center"
+                className="grid gap-3 px-4 py-4 sm:px-5 md:grid-cols-[minmax(0,2fr)_1fr_7rem_8rem_7rem_auto] md:items-center"
               >
                 <div className="flex min-w-0 items-center gap-3">
                   <div className="h-14 w-12 shrink-0 overflow-hidden rounded bg-background">
@@ -188,17 +256,40 @@ export default function ProductsPage() {
                     Number(product.salePrice ?? product.regularPrice),
                   )}
                 </p>
-                <p className="text-sm text-muted">
-                  {product.variants.length} variants
-                </p>
-                <button
-                  type="button"
-                  disabled={updating === product.id}
-                  onClick={() => void updatePublishing(product)}
-                  className="min-h-10 rounded-lg border border-line px-3 text-sm disabled:opacity-50"
-                >
-                  {product.status === "ACTIVE" ? "Archive" : "Publish"}
-                </button>
+                <div className="flex flex-wrap gap-1">
+                  {product.isNewArrival && (
+                    <span className="rounded-full bg-accent/10 px-2 py-1 text-[10px] font-medium text-accent">
+                      NEW
+                    </span>
+                  )}
+                  {product.isFeatured && (
+                    <span className="rounded-full bg-warning/10 px-2 py-1 text-[10px] font-medium text-warning">
+                      FEATURED
+                    </span>
+                  )}
+                  {!product.isFeatured && !product.isNewArrival && (
+                    <span className="text-xs text-muted">
+                      {product.variants.length} variants
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => openPlacement(product)}
+                    className="flex min-h-10 items-center gap-1.5 rounded-lg border border-accent px-3 text-sm text-accent"
+                  >
+                    <Sparkles size={15} /> Placement
+                  </button>
+                  <button
+                    type="button"
+                    disabled={updating === product.id}
+                    onClick={() => void updatePublishing(product)}
+                    className="min-h-10 rounded-lg border border-line px-3 text-sm disabled:opacity-50"
+                  >
+                    {product.status === "ACTIVE" ? "Archive" : "Publish"}
+                  </button>
+                </div>
               </article>
             ))}
           </div>
@@ -216,6 +307,149 @@ export default function ProductsPage() {
             void load();
           }}
         />
+      )}
+
+      {placementProduct && (
+        <div className="fixed inset-0 z-50 grid place-items-center p-4">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/45"
+            aria-label="Close placement editor"
+            onClick={() => setPlacementProduct(null)}
+          />
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="placement-title"
+            className="relative z-10 max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-line bg-surface p-5 shadow-2xl sm:p-6"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.18em] text-accent">
+                  Storefront merchandising
+                </p>
+                <h2
+                  id="placement-title"
+                  className="mt-1 text-xl font-semibold text-ink"
+                >
+                  {placementProduct.name}
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPlacementProduct(null)}
+                className="grid h-11 w-11 place-items-center"
+                aria-label="Close placement editor"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {placementProduct.status !== "ACTIVE" && (
+              <div className="mt-4 rounded-lg border border-warning/30 bg-warning/5 px-4 py-3 text-sm text-warning">
+                This product is not published. Save placement now, then publish
+                it from the product list.
+              </div>
+            )}
+
+            <div className="mt-5 space-y-3">
+              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-line p-4">
+                <input
+                  type="checkbox"
+                  checked={placementNewArrival}
+                  onChange={(event) =>
+                    setPlacementNewArrival(event.target.checked)
+                  }
+                  className="mt-1 h-4 w-4 accent-accent"
+                />
+                <span>
+                  <span className="block text-sm font-medium text-ink">
+                    New Arrivals / Just Dropped
+                  </span>
+                  <span className="mt-1 block text-xs text-muted">
+                    Adds the product to the homepage New Arrivals rail.
+                  </span>
+                </span>
+              </label>
+              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-line p-4">
+                <input
+                  type="checkbox"
+                  checked={placementFeatured}
+                  onChange={(event) =>
+                    setPlacementFeatured(event.target.checked)
+                  }
+                  className="mt-1 h-4 w-4 accent-accent"
+                />
+                <span>
+                  <span className="block text-sm font-medium text-ink">
+                    Crafted for You / Customer Favourites
+                  </span>
+                  <span className="mt-1 block text-xs text-muted">
+                    Uses the product in the crafted campaign imagery and
+                    featured product grid.
+                  </span>
+                </span>
+              </label>
+            </div>
+
+            <div className="mt-6">
+              <p className="text-sm font-medium text-ink">
+                Collection membership
+              </p>
+              <p className="mt-1 text-xs text-muted">
+                Products appear on every selected collection page.
+              </p>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                {collections.map((collection) => (
+                  <label
+                    key={collection.id}
+                    className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-line px-3 text-sm"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={placementCollections.includes(collection.id)}
+                      onChange={(event) =>
+                        setPlacementCollections((current) =>
+                          event.target.checked
+                            ? [...current, collection.id]
+                            : current.filter((id) => id !== collection.id),
+                        )
+                      }
+                      className="h-4 w-4 accent-accent"
+                    />
+                    {collection.name}
+                  </label>
+                ))}
+                {collections.length === 0 && (
+                  <p className="text-sm text-muted">
+                    Create a collection under Catalog first.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setPlacementProduct(null)}
+                className="min-h-11 rounded-lg border border-line px-5 text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={savingPlacement}
+                onClick={() => void savePlacement()}
+                className="flex min-h-11 items-center justify-center gap-2 rounded-lg bg-accent px-5 text-sm font-medium text-white disabled:opacity-50"
+              >
+                {savingPlacement && (
+                  <Loader2 size={16} className="animate-spin" />
+                )}
+                Save placement
+              </button>
+            </div>
+          </section>
+        </div>
       )}
     </div>
   );

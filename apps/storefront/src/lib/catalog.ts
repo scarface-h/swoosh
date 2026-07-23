@@ -61,6 +61,7 @@ export interface PublicCollection {
   bannerUrl: string | null;
   seoTitle: string | null;
   seoDescription: string | null;
+  isFeatured?: boolean;
   _count?: { products: number };
 }
 

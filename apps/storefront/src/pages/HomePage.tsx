@@ -6,10 +6,12 @@ import CampaignBanner from "@/components/home/CampaignBanner";
 import BestsellerGrid from "@/components/home/BestsellerGrid";
 import BrandValues from "@/components/home/BrandValues";
 import NewsletterBanner from "@/components/home/NewsletterBanner";
+import FeaturedCollections from "@/components/home/FeaturedCollections";
 import { apiFetch, apiFetchPage } from "@/lib/api";
 import {
   type CatalogProduct,
   type PublicCategory,
+  type PublicCollection,
   optionValues,
   productImage,
 } from "@/lib/catalog";
@@ -57,10 +59,11 @@ export default function HomePage() {
   const [featured, setFeatured] = useState<HomeCard[]>([]);
   const [catalog, setCatalog] = useState<CatalogProduct[]>([]);
   const [categories, setCategories] = useState<PublicCategory[]>([]);
+  const [collections, setCollections] = useState<PublicCollection[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
+    Promise.allSettled([
       apiFetchPage<CatalogProduct>(
         "/products?page=1&pageSize=8&newArrival=true&sort=newest",
       ),
@@ -69,18 +72,30 @@ export default function HomePage() {
       ),
       apiFetchPage<CatalogProduct>("/products?page=1&pageSize=24&sort=newest"),
       apiFetch<PublicCategory[]>("/categories"),
-    ])
-      .then(([newResult, featuredResult, catalogResult, categoryResult]) => {
-        setNewArrivals(newResult.items.map(toCard));
-        setFeatured(featuredResult.items.map(toCard));
-        setCatalog(catalogResult.items);
-        setCategories(categoryResult);
-      })
-      .catch(() => {
-        setNewArrivals([]);
-        setFeatured([]);
-        setCatalog([]);
-        setCategories([]);
+      apiFetch<PublicCollection[]>("/collections"),
+    ]).then(
+      ([
+        newResult,
+        featuredResult,
+        catalogResult,
+        categoryResult,
+        collectionResult,
+      ]) => {
+        if (newResult.status === "fulfilled")
+          setNewArrivals(newResult.value.items.map(toCard));
+        if (featuredResult.status === "fulfilled")
+          setFeatured(featuredResult.value.items.map(toCard));
+        if (catalogResult.status === "fulfilled")
+          setCatalog(catalogResult.value.items);
+        if (categoryResult.status === "fulfilled")
+          setCategories(categoryResult.value);
+        if (collectionResult.status === "fulfilled") {
+          setCollections(
+            collectionResult.value.filter(
+              (collection) => collection.isFeatured,
+            ),
+          );
+        }
       })
       .finally(() => setLoading(false));
   }, []);
@@ -108,6 +123,7 @@ export default function HomePage() {
       <CategoryGrid categories={categoryCards} loading={loading} />
       <NewArrivalsRail products={newArrivals} />
       <CampaignBanner image={campaignImage} />
+      <FeaturedCollections collections={collections} />
       <BestsellerGrid products={featured} />
       <BrandValues />
       <NewsletterBanner />
