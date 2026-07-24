@@ -348,7 +348,7 @@ export async function cancelOrder(orderId: string, actor: { type: string; id?: s
         },
       },
     });
-  }, { isolationLevel: 'Serializable' });
+  }, { isolationLevel: 'RepeatableRead' });
 }
 
 export async function updateOrderStatus(
@@ -404,7 +404,7 @@ export async function updateOrderStatus(
           },
         },
       });
-    }, { isolationLevel: 'Serializable' });
+    }, { isolationLevel: 'RepeatableRead' });
   }
   return prisma.order.update({
     where: { id: orderId },
