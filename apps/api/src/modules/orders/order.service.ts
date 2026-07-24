@@ -276,7 +276,7 @@ export async function createOrder(req: CreateOrderRequest) {
       }
       if (req.userId) await tx.cart.deleteMany({ where: { userId: req.userId } });
       return created;
-    }, { isolationLevel: 'Serializable', maxWait: 10_000, timeout: 20_000 });
+    }, { isolationLevel: 'RepeatableRead', maxWait: 10_000, timeout: 20_000 });
     const response = {
       orderNumber: order.orderNumber,
       trackingToken,
